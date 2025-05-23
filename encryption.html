@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptographic Demo v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 900px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #1a202c; }
+        h2 { border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 30px; }
+        h3 { margin-top: 20px; }
+        label { display: block; margin-top: 10px; font-weight: 600; color: #4a5568; }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #cbd5e0; border-radius: 4px;
+            box-sizing: border-box; font-size: 14px;
+        }
+        textarea { min-height: 70px; font-family: monospace; }
+        /* Base button styles are applied via Tailwind classes directly on elements */
+        .action-btn-group button { margin-right: 8px; }
+        .info, .error {
+            padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 0.9em;
+        }
+        .info { background-color: #e6fffa; border: 1px solid #38b2ac; color: #2c7a7b; }
+        .error { background-color: #fed7d7; border: 1px solid #f56565; color: #c53030; }
+        .key-display { word-break: break-all; }
+        .grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .text-xs { font-size: 0.75rem; /* 12px */ }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-700">Cryptographic Demo v2</h1>
+
+        <div id="status" class="hidden"></div>
+
+        <section id="key-management">
+            <h2>Part 1: RSA Key Pair Management</h2>
+            <p class="text-sm text-gray-600 mb-4">Generate an RSA key pair. The public key can be shared. The private key must be kept secret and can be encrypted with a password.</p>
+
+            <button id="generateKeysBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md mt-2 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2">Generate RSA Key Pair</button>
+
+            <div class="mt-4">
+                <label for="publicKeyArea">Public Key (JWK):</label>
+                <textarea id="publicKeyArea" rows="4" readonly class="key-display"></textarea>
+            </div>
+            <div>
+                <label for="privateKeyArea">Private Key (JWK - unencrypted):</label>
+                <textarea id="privateKeyArea" rows="7" readonly class="key-display"></textarea>
+            </div>
+
+            <h3 class="text-xl font-semibold mt-6">Protect Private Key with a Password</h3>
+            <div>
+                <label for="privKeyPassword">Password to encrypt/decrypt private key:</label>
+                <input type="password" id="privKeyPassword" placeholder="Enter a strong password">
+            </div>
+            <div class="action-btn-group mt-2">
+                <button id="encryptPrivKeyBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-3 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2">Encrypt Private Key Above</button>
+                <button id="decryptPrivKeyBtn" class="bg-teal-500 hover:bg-teal-600 text-white font-semibold py-2 px-3 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2">Decrypt Private Key Below</button>
+            </div>
+
+            <div class="mt-4">
+                <label for="encryptedPrivKeyArea">Encrypted Private Key (Base64):</label>
+                <textarea id="encryptedPrivKeyArea" rows="3" placeholder="Encrypted private key will appear here..."></textarea>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4 mt-2">
+                <div>
+                    <label for="privKeySalt">Salt (Base64):</label>
+                    <input type="text" id="privKeySalt" placeholder="Salt used..." readonly>
+                </div>
+                <div>
+                    <label for="privKeyIv">Initialization Vector (IV - Base64):</label>
+                    <input type="text" id="privKeyIv" placeholder="IV used..." readonly>
+                </div>
+            </div>
+            <div class="mt-4">
+                <label for="decryptedPrivKeyResultArea">Decrypted Private Key (JWK):</label>
+                <textarea id="decryptedPrivKeyResultArea" rows="7" readonly placeholder="Decrypted private key will appear here..."></textarea>
+            </div>
+        </section>
+
+        <section id="message-encryption" class="mt-10">
+            <h2>Part 2: Message Encryption and Decryption (Hybrid)</h2>
+            
+            <h3 class="text-xl font-semibold mt-6">Encrypt a Message</h3>
+            <div>
+                <label for="encryptMsgPublicKey">Recipient's Public Key (JWK):</label>
+                <textarea id="encryptMsgPublicKey" rows="4" placeholder="Paste public key (JWK) here..."></textarea>
+                <button id="useGeneratedPublicKeyForEncryptionBtn" class="text-xs bg-sky-500 hover:bg-sky-600 text-white font-semibold py-1 px-2 rounded-md mt-1 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2">Use Generated Public Key</button>
+            </div>
+            <div>
+                <label for="messageToEncrypt">Message to encrypt:</label>
+                <input type="text" id="messageToEncrypt" placeholder="Your secret message" value="Hello secret world!">
+            </div>
+            <button id="encryptMsgBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md mt-2 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2">Encrypt Message</button>
+
+            <div class="mt-4">
+                <label>Encrypted Data (to send to recipient):</label>
+                <div class="grid md:grid-cols-3 gap-4 p-3 border border-gray-200 rounded-md bg-gray-50">
+                    <div>
+                        <label for="wrappedDekArea" class="text-xs">Wrapped DEK (Base64):</label>
+                        <textarea id="wrappedDekArea" rows="2" readonly></textarea>
+                    </div>
+                    <div>
+                        <label for="dataIvArea" class="text-xs">Data IV (Base64):</label>
+                        <textarea id="dataIvArea" rows="2" readonly></textarea>
+                    </div>
+                    <div>
+                        <label for="encryptedDataArea" class="text-xs">Encrypted Message (Base64):</label>
+                        <textarea id="encryptedDataArea" rows="2" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="text-xl font-semibold mt-6">Decrypt a Message</h3>
+             <button id="useEncryptedDataForDecryptionBtn" class="text-xs bg-sky-500 hover:bg-sky-600 text-white font-semibold py-1 px-2 rounded-md mt-1 mb-2 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2">Use Encrypted Data Above for Decryption</button>
+            <div>
+                <label for="decryptMsgPrivateKey">Your Private Key (JWK):</label>
+                <textarea id="decryptMsgPrivateKey" rows="7" placeholder="Paste your private key (JWK) here..."></textarea>
+                 <div class="action-btn-group mt-1">
+                    <button id="useGeneratedPrivateKeyForDecryptionBtn" class="text-xs bg-sky-500 hover:bg-sky-600 text-white font-semibold py-1 px-2 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2">Use Generated Private Key (unencrypted)</button>
+                    <button id="useDecryptedPrivateKeyForDecryptionBtn" class="text-xs bg-sky-500 hover:bg-sky-600 text-white font-semibold py-1 px-2 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2">Use Decrypted Private Key (Part 1)</button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">If your private key is password-protected, decrypt it in Part 1 and use the appropriate button or copy the resulting JWK here.</p>
+            </div>
+             <div>
+                <label>Received Encrypted Data:</label>
+                 <div class="grid md:grid-cols-3 gap-4 p-3 border border-gray-200 rounded-md bg-gray-50 mt-1">
+                    <div>
+                        <label for="decryptWrappedDek" class="text-xs">Wrapped DEK (Base64):</label>
+                        <textarea id="decryptWrappedDek" rows="2" placeholder="Paste wrapped DEK"></textarea>
+                    </div>
+                    <div>
+                        <label for="decryptDataIv" class="text-xs">Data IV (Base64):</label>
+                        <textarea id="decryptDataIv" rows="2" placeholder="Paste data IV"></textarea>
+                    </div>
+                    <div>
+                        <label for="decryptEncryptedData" class="text-xs">Encrypted Message (Base64):</label>
+                        <textarea id="decryptEncryptedData" rows="2" placeholder="Paste encrypted message"></textarea>
+                    </div>
+                </div>
+            </div>
+            <button id="decryptMsgBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-md mt-2 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2">Decrypt Message</button>
+            <div class="mt-4">
+                <label for="decryptedMessageArea">Decrypted Message:</label>
+                <textarea id="decryptedMessageArea" rows="2" readonly></textarea>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Utility Functions for Base64 <-> ArrayBuffer
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        const statusDiv = document.getElementById('status');
+        function showStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'error' : 'info';
+            statusDiv.classList.remove('hidden');
+            // setTimeout(() => statusDiv.classList.add('hidden'), isError ? 8000 : 5000);
+            if (isError) console.error("ERROR: " + message); else console.log("INFO: " + message);
+        }
+
+        let currentPublicKeyObj, currentPrivateKeyObj; // CryptoKey objects
+
+        // --- PART 1: Key Management ---
+        const generateKeysBtn = document.getElementById('generateKeysBtn');
+        const publicKeyArea = document.getElementById('publicKeyArea');
+        const privateKeyArea = document.getElementById('privateKeyArea');
+        const privKeyPasswordInput = document.getElementById('privKeyPassword');
+        const encryptPrivKeyBtn = document.getElementById('encryptPrivKeyBtn');
+        const decryptPrivKeyBtn = document.getElementById('decryptPrivKeyBtn');
+        const encryptedPrivKeyArea = document.getElementById('encryptedPrivKeyArea');
+        const privKeySaltArea = document.getElementById('privKeySalt');
+        const privKeyIvArea = document.getElementById('privKeyIv');
+        const decryptedPrivKeyResultArea = document.getElementById('decryptedPrivKeyResultArea');
+
+        generateKeysBtn.addEventListener('click', async () => {
+            try {
+                const keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: "RSA-OAEP",
+                        modulusLength: 2048,
+                        publicExponent: new Uint8Array([1, 0, 1]),
+                        hash: "SHA-256",
+                    },
+                    true, 
+                    ["wrapKey", "unwrapKey"] 
+                );
+                currentPublicKeyObj = keyPair.publicKey;
+                currentPrivateKeyObj = keyPair.privateKey;
+
+                const publicKeyJwk = await window.crypto.subtle.exportKey("jwk", currentPublicKeyObj);
+                const privateKeyJwk = await window.crypto.subtle.exportKey("jwk", currentPrivateKeyObj);
+
+                publicKeyArea.value = JSON.stringify(publicKeyJwk, null, 2);
+                privateKeyArea.value = JSON.stringify(privateKeyJwk, null, 2);
+                showStatus("RSA key pair generated.");
+            } catch (err) {
+                showStatus("Key generation error: " + err.message, true);
+            }
+        });
+
+        encryptPrivKeyBtn.addEventListener('click', async () => {
+            const privateKeyJwkString = privateKeyArea.value;
+            const password = privKeyPasswordInput.value;
+
+            if (!privateKeyJwkString) { showStatus("Generate a key pair first.", true); return; }
+            if (!password) { showStatus("Enter a password to encrypt the private key.", true); return; }
+
+            try {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(12)); 
+
+                const passwordKey = await window.crypto.subtle.importKey(
+                    "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]
+                );
+                const aesKey = await window.crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt: salt, iterations: 200000, hash: "SHA-256" },
+                    passwordKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+                );
+
+                const privateKeyBuffer = new TextEncoder().encode(privateKeyJwkString);
+                const encryptedPrivateKey = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv }, aesKey, privateKeyBuffer
+                );
+
+                encryptedPrivKeyArea.value = arrayBufferToBase64(encryptedPrivateKey);
+                privKeySaltArea.value = arrayBufferToBase64(salt);
+                privKeyIvArea.value = arrayBufferToBase64(iv);
+                showStatus("Private key encrypted.");
+            } catch (err) {
+                showStatus("Private key encryption error: " + err.message, true);
+            }
+        });
+
+        decryptPrivKeyBtn.addEventListener('click', async () => {
+            const encryptedKeyBase64 = encryptedPrivKeyArea.value;
+            const saltBase64 = privKeySaltArea.value;
+            const ivBase64 = privKeyIvArea.value;
+            const password = privKeyPasswordInput.value;
+
+            if (!encryptedKeyBase64 || !saltBase64 || !ivBase64) { showStatus("Encrypted key, salt, and IV required.", true); return; }
+            if (!password) { showStatus("Password required for decryption.", true); return; }
+
+            try {
+                const salt = base64ToArrayBuffer(saltBase64);
+                const iv = base64ToArrayBuffer(ivBase64);
+                const encryptedPrivateKey = base64ToArrayBuffer(encryptedKeyBase64);
+
+                const passwordKey = await window.crypto.subtle.importKey(
+                    "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]
+                );
+                const aesKey = await window.crypto.subtle.deriveKey(
+                    { name: "PBKDF2", salt: salt, iterations: 200000, hash: "SHA-256" },
+                    passwordKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+                );
+
+                const decryptedPrivateKeyBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv }, aesKey, encryptedPrivateKey
+                );
+
+                decryptedPrivKeyResultArea.value = new TextDecoder().decode(decryptedPrivateKeyBuffer);
+                showStatus("Private key decrypted.");
+            } catch (err) {
+                showStatus("Private key decryption error: " + err.message, true);
+            }
+        });
+
+        // --- PART 2: Message Encryption/Decryption ---
+        const encryptMsgPublicKeyInput = document.getElementById('encryptMsgPublicKey');
+        const messageToEncryptInput = document.getElementById('messageToEncrypt');
+        const encryptMsgBtn = document.getElementById('encryptMsgBtn');
+        const wrappedDekArea = document.getElementById('wrappedDekArea');
+        const dataIvArea = document.getElementById('dataIvArea');
+        const encryptedDataArea = document.getElementById('encryptedDataArea');
+
+        const decryptMsgPrivateKeyInput = document.getElementById('decryptMsgPrivateKey');
+        const decryptWrappedDekInput = document.getElementById('decryptWrappedDek');
+        const decryptDataIvInput = document.getElementById('decryptDataIv');
+        const decryptEncryptedDataInput = document.getElementById('decryptEncryptedData');
+        const decryptMsgBtn = document.getElementById('decryptMsgBtn');
+        const decryptedMessageArea = document.getElementById('decryptedMessageArea');
+
+        // Auto-fill buttons
+        document.getElementById('useGeneratedPublicKeyForEncryptionBtn').addEventListener('click', () => {
+            if (publicKeyArea.value) encryptMsgPublicKeyInput.value = publicKeyArea.value;
+            else showStatus("Generate a public key first.", true);
+        });
+        document.getElementById('useGeneratedPrivateKeyForDecryptionBtn').addEventListener('click', () => {
+            if (privateKeyArea.value) decryptMsgPrivateKeyInput.value = privateKeyArea.value;
+            else showStatus("Generate a private key first.", true);
+        });
+         document.getElementById('useDecryptedPrivateKeyForDecryptionBtn').addEventListener('click', () => {
+            if (decryptedPrivKeyResultArea.value) decryptMsgPrivateKeyInput.value = decryptedPrivKeyResultArea.value;
+            else showStatus("Decrypt a private key first (Part 1).", true);
+        });
+        document.getElementById('useEncryptedDataForDecryptionBtn').addEventListener('click', () => {
+            if (wrappedDekArea.value) decryptWrappedDekInput.value = wrappedDekArea.value;
+            else { showStatus("Encrypt a message first.", true); return; }
+            if (dataIvArea.value) decryptDataIvInput.value = dataIvArea.value;
+            else { showStatus("Encrypt a message first (IV missing).", true); return; }
+            if (encryptedDataArea.value) decryptEncryptedDataInput.value = encryptedDataArea.value;
+            else { showStatus("Encrypt a message first (encrypted data missing).", true); return; }
+        });
+
+
+        encryptMsgBtn.addEventListener('click', async () => {
+            const publicKeyJwkString = encryptMsgPublicKeyInput.value;
+            const message = messageToEncryptInput.value;
+
+            if (!publicKeyJwkString || !message) { showStatus("Public key and message required to encrypt.", true); return; }
+            console.log("--- Encrypting Message ---");
+            try {
+                console.log("Public Key JWK (string):", publicKeyJwkString);
+                const publicKeyJwk = JSON.parse(publicKeyJwkString);
+                console.log("Public Key JWK (object):", publicKeyJwk);
+
+                const importedPublicKey = await window.crypto.subtle.importKey(
+                    "jwk", publicKeyJwk,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    false, ["wrapKey"]
+                );
+                console.log("Imported public key:", importedPublicKey);
+
+                const dek = await window.crypto.subtle.generateKey(
+                    { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+                );
+                console.log("DEK generated:", dek);
+
+                const dataIv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encodedMessage = new TextEncoder().encode(message);
+                const encryptedData = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: dataIv }, dek, encodedMessage
+                );
+                console.log("Encrypted message (ArrayBuffer):", encryptedData);
+
+                const wrappedDek = await window.crypto.subtle.wrapKey(
+                    "raw", dek, importedPublicKey, { name: "RSA-OAEP" }
+                );
+                console.log("Wrapped DEK (ArrayBuffer):", wrappedDek);
+
+                wrappedDekArea.value = arrayBufferToBase64(wrappedDek);
+                dataIvArea.value = arrayBufferToBase64(dataIv);
+                encryptedDataArea.value = arrayBufferToBase64(encryptedData);
+                showStatus("Message encrypted (hybrid scheme).");
+
+            } catch (err) {
+                showStatus("Message encryption error: " + err.message, true);
+                console.error("Encryption error details:", err);
+            }
+        });
+
+        decryptMsgBtn.addEventListener('click', async () => {
+            const privateKeyJwkString = decryptMsgPrivateKeyInput.value;
+            const wrappedDekBase64 = decryptWrappedDekInput.value;
+            const dataIvBase64 = decryptDataIvInput.value;
+            const encryptedDataBase64 = decryptEncryptedDataInput.value;
+
+            if (!privateKeyJwkString || !wrappedDekBase64 || !dataIvBase64 || !encryptedDataBase64) {
+                showStatus("Private key and all encrypted data parts required.", true);
+                return;
+            }
+            
+            console.log("--- Decrypting Message ---");
+            try {
+                console.log("Private Key JWK (string):", privateKeyJwkString);
+                const privateKeyJwk = JSON.parse(privateKeyJwkString);
+                console.log("Private Key JWK (object):", privateKeyJwk);
+
+                const importedPrivateKey = await window.crypto.subtle.importKey(
+                    "jwk", privateKeyJwk,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    false, ["unwrapKey"]
+                );
+                console.log("Imported private key:", importedPrivateKey);
+
+                const wrappedDek = base64ToArrayBuffer(wrappedDekBase64);
+                console.log("Wrapped DEK (ArrayBuffer from Base64):", wrappedDek);
+                const dataIv = base64ToArrayBuffer(dataIvBase64);
+                console.log("Data IV (ArrayBuffer from Base64):", dataIv);
+                const encryptedData = base64ToArrayBuffer(encryptedDataBase64);
+                console.log("Encrypted message (ArrayBuffer from Base64):", encryptedData);
+                
+                const dek = await window.crypto.subtle.unwrapKey(
+                    "raw", wrappedDek, importedPrivateKey,
+                    { name: "RSA-OAEP" }, 
+                    { name: "AES-GCM", length: 256 },
+                    true, ["encrypt", "decrypt"]
+                );
+                console.log("Unwrapped DEK:", dek);
+
+                const decryptedMessageBuffer = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: dataIv }, dek, encryptedData
+                );
+                console.log("Decrypted message (ArrayBuffer):", decryptedMessageBuffer);
+
+                decryptedMessageArea.value = new TextDecoder().decode(decryptedMessageBuffer);
+                showStatus("Message decrypted successfully.");
+
+            } catch (err) {
+                showStatus("Message decryption error: " + err.message, true);
+                console.error("Decryption error details:", err);
+            }
+        });
+    </script>
+</body>
+</html>
