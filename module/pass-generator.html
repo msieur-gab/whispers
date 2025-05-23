@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérificateur de Force de Mot de Passe (Avancé)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+        h1 {
+            color: #1a202c;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        /* Styles for the password-strength-checker component */
+        password-strength-checker label {
+            display: block;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        password-strength-checker .password-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            /* margin-bottom: 15px; /* Will be applied by the button group or input itself */
+        }
+        password-strength-checker input[type="password"],
+        password-strength-checker input[type="text"] { /* Added for when type is text */
+            width: 100%;
+            padding: 12px;
+            padding-right: 40px; /* Space for the icon */
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        password-strength-checker .toggle-password-visibility {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            color: #718096; /* gray-500 */
+        }
+        password-strength-checker .toggle-password-visibility svg {
+            width: 20px;
+            height: 20px;
+        }
+        password-strength-checker .generate-password-btn {
+            background-color: #667eea; /* Indigo-500 */
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem; /* text-sm */
+            margin-top: 10px;
+            margin-bottom: 15px; /* Space below button */
+            transition: background-color 0.2s;
+            width: 100%; /* Make button full width */
+        }
+        password-strength-checker .generate-password-btn:hover {
+            background-color: #5a67d8; /* Indigo-600 */
+        }
+
+
+        password-strength-checker ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        password-strength-checker li {
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            transition: color 0.3s ease;
+        }
+        password-strength-checker li.valid {
+            color: #2f855a; /* Vert foncé */
+        }
+        password-strength-checker li.invalid {
+            color: #c53030; /* Rouge foncé */
+        }
+        password-strength-checker li svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        .strength-meter {
+            height: 10px;
+            background-color: #e2e8f0;
+            border-radius: 5px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        .strength-meter-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 5px;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+        .strength-meter-fill.weak { background-color: #f56565; } /* Rouge */
+        .strength-meter-fill.medium { background-color: #ecc94b; } /* Jaune */
+        .strength-meter-fill.strong { background-color: #48bb78; } /* Vert */
+        .strength-meter-fill.very-strong { background-color: #38a169; } /* Vert foncé */
+
+        .strength-text {
+            text-align: right;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+        .strength-text.weak { color: #f56565; }
+        .strength-text.medium { color: #dd6b20; } /* Orange pour medium */
+        .strength-text.strong { color: #48bb78; }
+        .strength-text.very-strong { color: #38a169; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-2xl font-bold">Vérifiez la force de votre mot de passe</h1>
+        <password-strength-checker></password-strength-checker>
+    </div>
+
+    <script>
+        class PasswordStrengthChecker extends HTMLElement {
+            constructor() {
+                super();
+                this.attachShadow({ mode: 'open' });
+                this._password = '';
+                this._isPasswordVisible = false;
+
+                // SVG icons for password visibility toggle
+                this.eyeIcon = `
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <path d="M1 12C1 12 5 20 12 20C19 20 23 12 23 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle> </g></svg>
+                    `; // Changed stroke to currentColor
+                this.eyeSlashIcon = `
+                    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path clip-rule="evenodd" d="M22.6928 1.55018C22.3102 1.32626 21.8209 1.45915 21.6 1.84698L19.1533 6.14375C17.4864 5.36351 15.7609 4.96457 14.0142 4.96457C9.32104 4.96457 4.781 7.84644 1.11993 13.2641L1.10541 13.2854L1.09271 13.3038C0.970762 13.4784 0.967649 13.6837 1.0921 13.8563C3.79364 17.8691 6.97705 20.4972 10.3484 21.6018L8.39935 25.0222C8.1784 25.4101 8.30951 25.906 8.69214 26.1299L9.03857 26.3326C9.4212 26.5565 9.91046 26.4237 10.1314 26.0358L23.332 2.86058C23.553 2.47275 23.4219 1.97684 23.0392 1.75291L22.6928 1.55018ZM18.092 8.00705C16.7353 7.40974 15.3654 7.1186 14.0142 7.1186C10.6042 7.1186 7.07416 8.97311 3.93908 12.9239C3.63812 13.3032 3.63812 13.8561 3.93908 14.2354C6.28912 17.197 8.86102 18.9811 11.438 19.689L12.7855 17.3232C11.2462 16.8322 9.97333 15.4627 9.97333 13.5818C9.97333 11.2026 11.7969 9.27368 14.046 9.27368C15.0842 9.27368 16.0317 9.68468 16.7511 10.3612L18.092 8.00705ZM15.639 12.3137C15.2926 11.7767 14.7231 11.4277 14.046 11.4277C12.9205 11.4277 12 12.3906 12 13.5802C12 14.3664 12.8432 15.2851 13.9024 15.3624L15.639 12.3137Z" fill="currentColor" fill-rule="evenodd"></path><path d="M14.6873 22.1761C19.1311 21.9148 23.4056 19.0687 26.8864 13.931C26.9593 13.8234 27 13.7121 27 13.5797C27 13.4535 26.965 13.3481 26.8956 13.2455C25.5579 11.2677 24.1025 9.62885 22.5652 8.34557L21.506 10.2052C22.3887 10.9653 23.2531 11.87 24.0894 12.9239C24.3904 13.3032 24.3904 13.8561 24.0894 14.2354C21.5676 17.4135 18.7903 19.2357 16.0254 19.827L14.6873 22.1761Z" fill="currentColor"></path></g>
+                    </svg>`; // Changed fill to currentColor
+                this.generateIcon = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-2">
+                        <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 01-9.204-2.452.5.5 0 00-.312-.606l-1.532-.613a.5.5 0 00-.611.54l.37 1.483A5.507 5.507 0 014 10H3a.5.5 0 000 1h1.053a5.507 5.507 0 01.134.98l-.37 1.483a.5.5 0 00.61.54l1.533-.613a.5.5 0 00.312-.606 5.503 5.503 0 013.295-4.422V10a.5.5 0 001 0V8.677a5.503 5.503 0 013.295 4.422.5.5 0 00.312.606l1.532.613a.5.5 0 00.611-.54l-.37-1.483a5.507 5.507 0 01.134-.98H17a.5.5 0 000-1h-1.053a5.507 5.507 0 01-.134-.98l.37-1.483a.5.5 0 00-.611-.54l-1.532.613a.5.5 0 00-.312.606zm-4.816-2.131a4.001 4.001 0 00-2.992 5.106l.11.443.05.198a4 4 0 005.658-3.242l-.05-.199-.11-.442a4.001 4.001 0 00-2.666-1.864z" clip-rule="evenodd" />
+                    </svg>
+                `;
+
+
+                this.rules = [
+                    { id: 'length', testFn: (pwd) => pwd.length >= 12, message: "Au moins 12 caractères", met: false },
+                    { id: 'uppercase', testFn: (pwd) => /[A-Z]/.test(pwd), message: "Au moins une lettre majuscule (A-Z)", met: false },
+                    { id: 'lowercase', testFn: (pwd) => /[a-z]/.test(pwd), message: "Au moins une lettre minuscule (a-z)", met: false },
+                    { id: 'number', testFn: (pwd) => /[0-9]/.test(pwd), message: "Au moins un chiffre (0-9)", met: false },
+                    { id: 'symbol', testFn: (pwd) => /[^A-Za-z0-9]/.test(pwd), message: "Au moins un symbole spécial (!@#$...)", met: false },
+                    { 
+                        id: 'noConsecutiveTypes', 
+                        testFn: (pwd) => pwd.length === 0 ? false : !this._hasTooManyConsecutiveSameType(pwd, 3), 
+                        message: "Éviter >3 caractères consécutifs du même type (ex: 'aaaa', '1111')", 
+                        met: false 
+                    }
+                ];
+                this.render();
+            }
+
+            static get observedAttributes() {
+                return ['password-label', 'input-placeholder'];
+            }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+                if (oldValue !== newValue) {
+                    this.render();
+                }
+            }
+            
+            get passwordLabel() {
+                return this.getAttribute('password-label') || 'Mot de passe :';
+            }
+
+            get inputPlaceholder() {
+                return this.getAttribute('input-placeholder') || 'Entrez votre mot de passe';
+            }
+
+            _getCharacterType(char) {
+                if (/[a-z]/.test(char)) return 'lowercase';
+                if (/[A-Z]/.test(char)) return 'uppercase';
+                if (/[0-9]/.test(char)) return 'digit';
+                if (/[^A-Za-z0-9]/.test(char)) return 'symbol';
+                return 'unknown';
+            }
+
+            _hasTooManyConsecutiveSameType(password, limit) {
+                if (password.length <= limit) {
+                    return false;
+                }
+                let count = 0;
+                let lastType = '';
+                for (let i = 0; i < password.length; i++) {
+                    const char = password[i];
+                    const currentType = this._getCharacterType(char);
+                    if (currentType === 'unknown') {
+                        lastType = ''; 
+                        count = 0;
+                        continue;
+                    }
+                    if (currentType === lastType) {
+                        count++;
+                    } else {
+                        lastType = currentType;
+                        count = 1;
+                    }
+                    if (count > limit) {
+                        return true; 
+                    }
+                }
+                return false; 
+            }
+
+            _generatePassword() {
+                const length = 16; // Desired length for generated password
+                const lower = 'abcdefghijklmnopqrstuvwxyz';
+                const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                const numbers = '0123456789';
+                const symbols = '!@#$%^&*()_+-=[]{};:,./<>?';
+
+                let password = '';
+                // Ensure at least one of each required type
+                password += lower[Math.floor(Math.random() * lower.length)];
+                password += upper[Math.floor(Math.random() * upper.length)];
+                password += numbers[Math.floor(Math.random() * numbers.length)];
+                password += symbols[Math.floor(Math.random() * symbols.length)];
+
+                const allChars = lower + upper + numbers + symbols;
+                for (let i = password.length; i < length; i++) {
+                    password += allChars[Math.floor(Math.random() * allChars.length)];
+                }
+
+                // Shuffle the password to make the initial characters random
+                password = password.split('').sort(() => 0.5 - Math.random()).join('');
+                
+                let attempts = 0;
+                while (this._hasTooManyConsecutiveSameType(password, 3) && attempts < 10) {
+                     password = password.split('').sort(() => 0.5 - Math.random()).join(''); 
+                     attempts++;
+                }
+
+
+                const inputElement = this.shadowRoot.querySelector('#passwordInput');
+                inputElement.value = password;
+                this._password = password; 
+                this.checkStrength(); 
+            }
+
+
+            connectedCallback() {
+                const inputElement = this.shadowRoot.querySelector('#passwordInput');
+                const toggleButton = this.shadowRoot.querySelector('#togglePasswordVisibilityBtn');
+                const generateButton = this.shadowRoot.querySelector('#generatePasswordBtn');
+
+
+                inputElement.addEventListener('input', (event) => {
+                    this._password = event.target.value;
+                    this.checkStrength();
+                });
+
+                toggleButton.addEventListener('click', () => {
+                    this._isPasswordVisible = !this._isPasswordVisible;
+                    inputElement.type = this._isPasswordVisible ? 'text' : 'password';
+                    toggleButton.innerHTML = this._isPasswordVisible ? this.eyeSlashIcon : this.eyeIcon;
+                });
+
+                generateButton.addEventListener('click', () => {
+                    this._generatePassword();
+                });
+
+                this.checkStrength(); 
+            }
+
+            checkStrength() {
+                let score = 0;
+                this.rules.forEach(rule => {
+                    if (typeof rule.testFn === 'function') {
+                        rule.met = rule.testFn(this._password);
+                    } else if (rule.regex) { 
+                        rule.met = rule.regex.test(this._password);
+                    }
+                    if (rule.met) {
+                        score++;
+                    }
+                });
+                this.updateFeedback(score);
+            }
+
+            updateFeedback(score) {
+                this.rules.forEach(rule => {
+                    const liElement = this.shadowRoot.querySelector(`#rule-${rule.id}`);
+                    if (liElement) {
+                        liElement.className = rule.met ? 'valid' : 'invalid';
+                        liElement.innerHTML = `
+                            <svg viewBox="0 0 20 20" fill="currentColor">
+                                ${rule.met 
+                                    ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />' 
+                                    : '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />'
+                                }
+                            </svg>
+                            ${rule.message}
+                        `;
+                    }
+                });
+
+                const meterFill = this.shadowRoot.querySelector('.strength-meter-fill');
+                const strengthTextElement = this.shadowRoot.querySelector('.strength-text');
+                
+                let strengthPercentage = 0;
+                let strengthLabel = "";
+                let strengthClass = ""; // Initialize to empty for the no-password case
+
+                if (this._password.length === 0) {
+                    // Values remain at their initial empty/zero state
+                } else { 
+                    strengthPercentage = (score / this.rules.length) * 100;
+                    if (score <= 1) { 
+                        strengthLabel = "Très faible";
+                        strengthClass = "weak";
+                    } else if (score === 2) {
+                        strengthLabel = "Faible";
+                        strengthClass = "weak";
+                    } else if (score === 3) {
+                        strengthLabel = "Moyen";
+                        strengthClass = "medium";
+                    } else if (score === 4) {
+                        strengthLabel = "Assez Fort";
+                        strengthClass = "medium";
+                    } else if (score === 5) {
+                        strengthLabel = "Fort";
+                        strengthClass = "strong";
+                    } else if (score === 6) {
+                        strengthLabel = "Très fort";
+                        strengthClass = "very-strong";
+                    }
+                }
+                
+                meterFill.style.width = `${strengthPercentage}%`;
+                meterFill.className = `strength-meter-fill ${strengthClass}`; 
+                strengthTextElement.textContent = strengthLabel;
+                strengthTextElement.className = `strength-text ${strengthClass}`;
+            }
+
+            render() {
+                this.shadowRoot.innerHTML = `
+                    <style>
+                        :host { display: block; }
+                        label { display: block; font-weight: 600; color: #4a5568; margin-bottom: 8px; }
+                        .password-input-container {
+                            position: relative;
+                            display: flex;
+                            align-items: center;
+                            margin-bottom: 0; /* Adjusted as button is now separate */
+                        }
+                        input[type="password"], input[type="text"] {
+                            width: 100%; padding: 12px; padding-right: 45px; 
+                            border: 1px solid #cbd5e0; border-radius: 6px;
+                            font-size: 1rem; box-sizing: border-box;
+                        }
+                        .toggle-password-visibility {
+                            position: absolute;
+                            right: 1px; top: 1px; bottom: 1px; width: 40px;
+                            background: transparent; border: none; border-left: 1px solid #cbd5e0; 
+                            padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;
+                            cursor: pointer; color: #718096;
+                            border-top-right-radius: 6px; border-bottom-right-radius: 6px;
+                        }
+                        .toggle-password-visibility:hover { color: #2d3748; }
+                        .toggle-password-visibility svg { width: 20px; height: 20px; }
+
+                        .generate-password-btn {
+                            background-color: #667eea; color: white; padding: 8px 12px;
+                            border: none; border-radius: 6px; cursor: pointer;
+                            font-weight: 500; font-size: 0.875rem; margin-top: 10px; margin-bottom: 15px;
+                            transition: background-color 0.2s; width: 100%;
+                            display: flex; align-items: center; justify-content: center;
+                        }
+                        .generate-password-btn:hover { background-color: #5a67d8; }
+                        .generate-password-btn svg { width: 16px; height: 16px; margin-right: 6px;}
+
+
+                        ul { list-style-type: none; padding: 0; margin-top: 10px; font-size: 0.9rem; }
+                        li { margin-bottom: 6px; display: flex; align-items: center; transition: color 0.3s ease; }
+                        li.valid { color: #2f855a; }
+                        li.invalid { color: #c53030; }
+                        li svg { width: 18px; height: 18px; margin-right: 8px; flex-shrink: 0; }
+                        .strength-meter { height: 10px; background-color: #e2e8f0; border-radius: 5px; margin-top: 15px; overflow: hidden; }
+                        .strength-meter-fill { height: 100%; width: 0%; border-radius: 5px; transition: width 0.3s ease, background-color 0.3s ease; }
+                        .strength-meter-fill.weak { background-color: #f56565; }
+                        .strength-meter-fill.medium { background-color: #ecc94b; }
+                        .strength-meter-fill.strong { background-color: #48bb78; }
+                        .strength-meter-fill.very-strong { background-color: #38a169; }
+                        .strength-text { text-align: right; font-size: 0.85rem; font-weight: 500; margin-top: 5px; }
+                        .strength-text.weak { color: #f56565; }
+                        .strength-text.medium { color: #dd6b20; }
+                        .strength-text.strong { color: #48bb78; }
+                        .strength-text.very-strong { color: #38a169; }
+                    </style>
+                    <div>
+                        <label for="passwordInput">${this.passwordLabel}</label>
+                        <div class="password-input-container">
+                            <input type="${this._isPasswordVisible ? 'text' : 'password'}" id="passwordInput" placeholder="${this.inputPlaceholder}" autocomplete="new-password">
+                            <button type="button" id="togglePasswordVisibilityBtn" class="toggle-password-visibility" aria-label="Basculer la visibilité du mot de passe">
+                                ${this._isPasswordVisible ? this.eyeSlashIcon : this.eyeIcon}
+                            </button>
+                        </div>
+                        <button type="button" id="generatePasswordBtn" class="generate-password-btn">
+                            ${this.generateIcon}
+                            Générer un mot de passe
+                        </button>
+                        
+                        <div class="strength-meter">
+                            <div class="strength-meter-fill"></div>
+                        </div>
+                        <div class="strength-text"></div>
+
+                        <ul id="strengthCriteria">
+                            ${this.rules.map(rule => `
+                                <li id="rule-${rule.id}" class="invalid">
+                                    <svg viewBox="0 0 20 20" fill="currentColor">
+                                        </svg>
+                                    ${rule.message}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        customElements.define('password-strength-checker', PasswordStrengthChecker);
+    </script>
+</body>
+</html>
