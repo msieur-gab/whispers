@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Questionnaire</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 700px;
+            min-height: 400px; 
+            display: flex;
+            flex-direction: column;
+            position: relative; /* For dev button positioning */
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+        }
+        #form-element-display-area {
+            margin-bottom: 20px;
+            flex-grow: 1; 
+        }
+        .form-element {
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .form-element:last-child {
+            border-bottom: none;
+        }
+        .element-label {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: block;
+        }
+        .element-label .required-indicator {
+            color: #e74c3c;
+            margin-left: 4px;
+            font-weight: bold;
+        }
+        .section-header-label {
+            font-size: 1.4em;
+            color: #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+        .info-block-text {
+            font-size: 1em;
+            color: #555;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #bdc3c7;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .radio-option, .checkbox-option {
+            display: block;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .radio-option input, .checkbox-option input {
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        .navigation-button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #3498db;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        .navigation-button:hover {
+            background-color: #2980b9;
+        }
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9em;
+            margin-top: -10px;
+            margin-bottom: 10px;
+        }
+        .submit-message, .final-answers-summary {
+            padding: 20px;
+            text-align: center;
+            background-color: #e8f6f3;
+            color: #1abc9c;
+            border-radius: 4px;
+        }
+        .final-answers-summary h3 { margin-top: 0; color: #2c3e50; }
+        .final-answers-summary p { margin: 8px 0; font-size: 1em; text-align: left; }
+        .final-answers-summary strong { color: #34495e; }
+
+        /* Dev Load Button */
+        #dev-load-json-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            background-color: #7f8c8d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 100; /* Ensure it's above other content if overlapping */
+        }
+        #dev-load-json-btn:hover {
+            background-color: #6c7a7b;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.visible {
+            display: flex;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.8em;
+            cursor: pointer;
+            color: #777;
+        }
+        .modal-close-btn:hover {
+            color: #333;
+        }
+        .modal-content h2 { margin-top:0; color: #2c3e50; }
+        .modal-content .control-group { margin-bottom: 15px; }
+        .modal-content .control-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .modal-content .control-group input[type="file"],
+        .modal-content .control-group textarea {
+            width: calc(100% - 22px); padding: 10px; border: 1px solid #ccc;
+            border-radius: 4px; box-sizing: border-box; margin-bottom: 10px;
+        }
+        .modal-content .control-group textarea { min-height: 150px; }
+        .modal-content .control-group button {
+            background-color: #3498db; color: white; padding: 10px 15px;
+            border: none; border-radius: 4px; cursor: pointer;
+        }
+
+
+        #test-form-render-area .test-question-label, #test-form-render-area .test-section-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; color: #2c3e50; }
+        #test-form-render-area .test-question-label .required-indicator { color: #e74c3c; margin-left: 4px; font-weight: bold;}
+        #test-form-render-area .test-navigation-btn, 
+        #test-form-render-area .test-radio-option,
+        #test-form-render-area .test-checkbox-option { margin-bottom: 10px; }
+        #test-form-render-area .test-checkbox-option input,
+        #test-form-render-area .test-radio-option input { margin-right: 8px; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="form-container">
+        <button id="dev-load-json-btn" title="Load Dev JSON Definition">⚙️ Dev Load</button>
+        <h1>Support Questionnaire</h1>
+        <div id="form-element-display-area">
+            <p>Loading form...</p>
+        </div>
+    </div>
+
+    <div id="dev-json-load-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button type="button" class="modal-close-btn" id="close-dev-json-modal-btn">&times;</button>
+            <h2>Load Form Definition (Dev)</h2>
+            <div class="control-group">
+                <label for="dev-import-json-file">Import JSON File:</label>
+                <input type="file" id="dev-import-json-file" accept=".json">
+                <button type="button" id="dev-import-json-file-btn" style="margin-top: 5px;">Load from File</button>
+            </div>
+            <hr style="margin: 20px 0;">
+            <div class="control-group">
+                <label for="dev-paste-json-area">Or Paste JSON Text:</label>
+                <textarea id="dev-paste-json-area" placeholder="Paste your form definition JSON here..."></textarea>
+                <button type="button" id="dev-import-json-text-btn" style="margin-top: 5px;">Load from Text</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const formElementDisplayArea = document.getElementById('form-element-display-area');
+        let formDefinitionData = [];
+        let formAnswers = {};
+        let currentElementId = null;
+
+        const devLoadJsonBtn = document.getElementById('dev-load-json-btn');
+        const devJsonLoadModal = document.getElementById('dev-json-load-modal');
+        const closeDevJsonModalBtn = document.getElementById('close-dev-json-modal-btn');
+        const devImportJsonFileEl = document.getElementById('dev-import-json-file');
+        const devImportJsonFileBtn = document.getElementById('dev-import-json-file-btn');
+        const devPasteJsonArea = document.getElementById('dev-paste-json-area');
+        const devImportJsonTextBtn = document.getElementById('dev-import-json-text-btn');
+
+
+        // Embed the JSON definition directly
+//         const formDefinitionJSON = `
+// [
+//   {
+//     "id": "section_1",
+//     "type": "section_header",
+//     "label": "Start Here",
+//     "is_start_of_phase": "Start Here",
+//     "default_next_element_id": "q_1"
+//   },
+//   {
+//     "id": "q_1",
+//     "label": "welcome to this test",
+//     "type": "info_block",
+//     "options": [],
+//     "sectionId": "section_1",
+//     "default_next_element_id": "q_2"
+//   },
+//   {
+//     "id": "q_2",
+//     "label": "first question section 1",
+//     "type": "text",
+//     "options": [],
+//     "sectionId": "section_1",
+//     "default_next_element_id": "q_3",
+//     "required": true
+//   },
+//   {
+//     "id": "q_3",
+//     "label": "second question section 1",
+//     "type": "select",
+//     "options": [
+//       {
+//         "label": "go to section 2",
+//         "value": "s2",
+//         "branch_to_element_id": "section_2"
+//       },
+//       {
+//         "label": "go to section 3",
+//         "value": "s3",
+//         "branch_to_element_id": "section_3"
+//       },
+//       {
+//         "label": "go to end",
+//         "value": "s4",
+//         "branch_to_element_id": "section_4"
+//       }
+//     ],
+//     "sectionId": "section_1",
+//     "is_start_of_phase": "this is an informational value",
+//     "required": true
+//   },
+//   {
+//     "id": "section_2",
+//     "type": "section_header",
+//     "label": "Section 2",
+//     "is_start_of_phase": "Section 2",
+//     "default_next_element_id": "q_4"
+//   },
+//   {
+//     "id": "q_4",
+//     "label": "first question section 2",
+//     "type": "text",
+//     "options": [],
+//     "sectionId": "section_2",
+//     "default_next_element_id": "q_5"
+//   },
+//   {
+//     "id": "q_5",
+//     "label": "second question section 2",
+//     "type": "text",
+//     "options": [],
+//     "sectionId": "section_2",
+//     "default_next_element_id": "section_3"
+//   },
+//   {
+//     "id": "section_3",
+//     "type": "section_header",
+//     "label": "Section 3",
+//     "is_start_of_phase": "Section 3",
+//     "default_next_element_id": "q_6"
+//   },
+//   {
+//     "id": "q_6",
+//     "label": "first question section 3",
+//     "type": "text",
+//     "options": [],
+//     "sectionId": "section_3",
+//     "default_next_element_id": "q_7",
+//     "required": true
+//   },
+//   {
+//     "id": "q_7",
+//     "label": "second question section 3",
+//     "type": "radio",
+//     "options": [
+//       {
+//         "label": "go to section 1",
+//         "value": "goto_s1",
+//         "branch_to_element_id": "section_1"
+//       },
+//       {
+//         "label": "go to section 2",
+//         "value": "goto_s2",
+//         "branch_to_element_id": "section_2"
+//       },
+//       {
+//         "label": "go to end",
+//         "value": "goto_s4",
+//         "branch_to_element_id": "section_4"
+//       }
+//     ],
+//     "sectionId": "section_3",
+//     "is_start_of_phase": "you might loop",
+//     "required": true
+//   },
+//   {
+//     "id": "section_4",
+//     "type": "section_header",
+//     "label": "Section 4 (End)",
+//     "is_start_of_phase": "Section 4",
+//     "default_next_element_id": "q_8"
+//   },
+//   {
+//     "id": "q_8",
+//     "label": "first question end section",
+//     "type": "text",
+//     "options": [],
+//     "sectionId": "section_4",
+//     "default_next_element_id": "q_9"
+//   },
+//   {
+//     "id": "q_9",
+//     "label": "second question end section (final)",
+//     "type": "text",
+//     "options": [],
+//     "branch_to_element_id": "_SUBMIT_FORM_",
+//     "sectionId": "section_4"
+//   }
+// ]
+//         `;
+
+        function loadFormDefinition(jsonString) {
+            try {
+                const newData = JSON.parse(jsonString);
+                if (!Array.isArray(newData)) {
+                    alert("Invalid JSON format. Expected an array of form elements.");
+                    return false;
+                }
+                formDefinitionData = newData;
+                console.log("New form definition loaded:", formDefinitionData);
+                return true;
+            } catch (e) {
+                console.error("Error parsing form definition JSON:", e);
+                formElementDisplayArea.innerHTML = "<p>Error: Could not load form definition.</p>";
+                return false;
+            }
+        }
+
+        function startForm() {
+            formAnswers = {};
+            if (formDefinitionData.length > 0) {
+                currentElementId = formDefinitionData[0].id; 
+                displayFormElement(currentElementId);
+            } else {
+                formElementDisplayArea.innerHTML = "<p>No form elements defined.</p>";
+            }
+        }
+        
+        function captureAndValidateCurrentAnswer() {
+            if (!currentElementId || currentElementId === '_SUBMIT_FORM_') return true;
+
+            const elementData = formDefinitionData.find(el => el.id === currentElementId);
+            if (!elementData || elementData.type === 'section_header' || elementData.type === 'info_block') {
+                return true; 
+            }
+
+            let value = null;
+            let isValid = true;
+            const inputElementId = `form_input_${currentElementId}`;
+
+            switch (elementData.type) {
+                case 'text':
+                case 'textarea':
+                    const textInput = formElementDisplayArea.querySelector(`#${inputElementId}`);
+                    if (textInput) value = textInput.value.trim();
+                    if (elementData.required && !value) isValid = false;
+                    break;
+                case 'radio':
+                    const checkedRadio = formElementDisplayArea.querySelector(`input[name="${inputElementId}"]:checked`);
+                    if (checkedRadio) value = checkedRadio.value;
+                    if (elementData.required && !value) isValid = false;
+                    break;
+                case 'checkboxes':
+                    value = [];
+                    formElementDisplayArea.querySelectorAll(`input[name="${inputElementId}"]:checked`).forEach(cb => {
+                        value.push(cb.value);
+                    });
+                    if (elementData.required && value.length === 0) isValid = false;
+                    if (value.length === 0) value = null; 
+                    break;
+                case 'select':
+                    const selectElement = formElementDisplayArea.querySelector(`#${inputElementId}`);
+                    if (selectElement && selectElement.value) value = selectElement.value;
+                    if (elementData.required && !value) isValid = false;
+                    break;
+            }
+
+            if (value !== null) { 
+                formAnswers[currentElementId] = value;
+            } else if (elementData.required && !isValid) { 
+                delete formAnswers[currentElementId];
+            } else if (!elementData.required && value === null){ 
+                delete formAnswers[currentElementId];
+            }
+
+
+            const existingError = formElementDisplayArea.querySelector('.error-message');
+            if (existingError) existingError.remove();
+
+            if (!isValid) {
+                const errorMsg = document.createElement('p');
+                errorMsg.classList.add('error-message');
+                errorMsg.textContent = "This field is required.";
+                const labelElement = formElementDisplayArea.querySelector('.element-label');
+                if (labelElement) {
+                    labelElement.parentNode.insertBefore(errorMsg, labelElement.nextSibling);
+                } else {
+                     formElementDisplayArea.insertBefore(errorMsg, formElementDisplayArea.firstChild);
+                }
+            }
+            console.log("Captured answers:", formAnswers);
+            return isValid;
+        }
+
+
+        function displayFormElement(elementId) {
+            if (elementId === '_SUBMIT_FORM_') {
+                displayAnswerSummary();
+                return;
+            }
+
+            const element = formDefinitionData.find(el => el.id === elementId);
+            if (!element) {
+                formElementDisplayArea.innerHTML = `<p class="error-message">Error: Element ID "${elementId}" not found. Form cannot proceed.</p>`;
+                currentElementId = '_ERROR_'; 
+                return;
+            }
+            
+            currentElementId = element.id; 
+            formElementDisplayArea.innerHTML = ''; 
+
+            const elementDiv = document.createElement('div');
+            elementDiv.classList.add('form-element');
+            elementDiv.setAttribute('data-element-id', element.id);
+
+            const requiredIndicator = element.required ? '<span class="required-indicator">*</span>' : '';
+            let html = '';
+            let needsNextButton = false;
+            let nextTargetId = element.branch_to_element_id || element.default_next_element_id;
+            if (!nextTargetId) {
+                const currentIndex = formDefinitionData.findIndex(el => el.id === element.id);
+                if (currentIndex !== -1 && currentIndex < formDefinitionData.length - 1) {
+                    nextTargetId = formDefinitionData[currentIndex + 1].id;
+                } else {
+                    nextTargetId = '_SUBMIT_FORM_';
+                }
+            }
+
+
+            if (element.type === 'section_header') {
+                html += `<div class="element-label section-header-label">${element.label}</div>`;
+                needsNextButton = true;
+            } else if (element.type === 'info_block') {
+                html += `<div class="info-block-text">${element.label}</div>`;
+                needsNextButton = true;
+            } else {
+                html += `<label class="element-label" for="form_input_${element.id}">${element.label} ${requiredIndicator}</label>`;
+                switch (element.type) {
+                    case 'text':
+                        html += `<input type="text" id="form_input_${element.id}" name="form_input_${element.id}">`;
+                        needsNextButton = true;
+                        break;
+                    case 'textarea':
+                        html += `<textarea id="form_input_${element.id}" name="form_input_${element.id}" rows="4"></textarea>`;
+                        needsNextButton = true;
+                        break;
+                    case 'radio':
+                        (element.options || []).forEach(opt => {
+                            html += `<label class="radio-option"><input type="radio" name="form_input_${element.id}" value="${opt.value}" data-branch-target="${opt.branch_to_element_id || ''}"> ${opt.label}</label>`;
+                        });
+                        if (!element.options || !element.options.some(opt => opt.branch_to_element_id)) {
+                            needsNextButton = true;
+                        }
+                        break;
+                    case 'checkboxes':
+                        (element.options || []).forEach(opt => {
+                            html += `<label class="checkbox-option"><input type="checkbox" name="form_input_${element.id}" value="${opt.value}"> ${opt.label}</label>`;
+                        });
+                        needsNextButton = true; 
+                        break;
+                    case 'select':
+                        html += `<select id="form_input_${element.id}" name="form_input_${element.id}">`;
+                        html += `<option value="">-- Select an option --</option>`;
+                        (element.options || []).forEach(opt => {
+                            html += `<option value="${opt.value}" data-branch-target="${opt.branch_to_element_id || ''}">${opt.label}</option>`;
+                        });
+                        html += `</select>`;
+                        if (!element.options || !element.options.some(opt => opt.branch_to_element_id)) {
+                            needsNextButton = true;
+                        }
+                        break;
+                }
+            }
+            
+            elementDiv.innerHTML = html;
+            formElementDisplayArea.appendChild(elementDiv);
+
+            if (needsNextButton) {
+                const nextButton = document.createElement('button');
+                nextButton.classList.add('navigation-button');
+                nextButton.textContent = (nextTargetId === '_SUBMIT_FORM_') ? "Submit Form" : "Next";
+                nextButton.addEventListener('click', () => {
+                    if (captureAndValidateCurrentAnswer()) {
+                        displayFormElement(nextTargetId);
+                    }
+                });
+                elementDiv.appendChild(nextButton);
+            }
+            attachLiveFormListeners(element);
+        }
+        
+        function attachLiveFormListeners(element) {
+            const inputElementId = `form_input_${element.id}`;
+            if (element.type === 'radio') {
+                formElementDisplayArea.querySelectorAll(`input[name="${inputElementId}"]`).forEach(radio => {
+                    radio.addEventListener('change', (e) => {
+                        if (captureAndValidateCurrentAnswer()) {
+                            const branchTarget = e.target.getAttribute('data-branch-target');
+                            if (branchTarget && branchTarget !== "") {
+                                displayFormElement(branchTarget);
+                            } else {
+                                const nextId = element.default_next_element_id || getNextElementIdInSequence(element.id);
+                                displayFormElement(nextId);
+                            }
+                        }
+                    });
+                });
+            } else if (element.type === 'select') {
+                const selectElement = formElementDisplayArea.querySelector(`#${inputElementId}`);
+                if (selectElement) {
+                    selectElement.addEventListener('change', (e) => {
+                         if (captureAndValidateCurrentAnswer()) {
+                            const selectedOptionEl = e.target.options[e.target.selectedIndex];
+                            const branchTarget = selectedOptionEl.getAttribute('data-branch-target');
+                            if (branchTarget && branchTarget !== "") {
+                                displayFormElement(branchTarget);
+                            } else {
+                                const nextId = element.default_next_element_id || getNextElementIdInSequence(element.id);
+                                displayFormElement(nextId);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        function getNextElementIdInSequence(currentElemId) {
+            const currentIndex = formDefinitionData.findIndex(el => el.id === currentElemId);
+            if (currentIndex !== -1 && currentIndex < formDefinitionData.length - 1) {
+                return formDefinitionData[currentIndex + 1].id;
+            }
+            return '_SUBMIT_FORM_';
+        }
+
+        function displayAnswerSummary() {
+            formElementDisplayArea.innerHTML = ''; 
+            let summaryHTML = '<div class="submit-message">Thank you for completing the questionnaire!</div>';
+            summaryHTML += '<div class="final-answers-summary"><h3>Your Answers:</h3>';
+            if (Object.keys(formAnswers).length === 0) {
+                summaryHTML += '<p>No answers were recorded.</p>';
+            } else {
+                formDefinitionData.forEach(element => { 
+                    if (formAnswers.hasOwnProperty(element.id)) {
+                        const questionLabel = element.label || element.id;
+                        let answerDisplay = formAnswers[element.id];
+                        if (Array.isArray(answerDisplay)) {
+                            answerDisplay = answerDisplay.join(', ');
+                        }
+                        summaryHTML += `<p><strong>${questionLabel}:</strong> ${answerDisplay || '<em>(Not answered)</em>'}</p>`;
+                    }
+                });
+            }
+            summaryHTML += '</div>';
+            formElementDisplayArea.innerHTML = summaryHTML;
+            currentElementId = '_SUBMIT_FORM_'; 
+        }
+
+        // --- Dev JSON Load Modal Logic ---
+        devLoadJsonBtn.addEventListener('click', () => {
+            devJsonLoadModal.classList.add('visible');
+        });
+        closeDevJsonModalBtn.addEventListener('click', () => {
+            devJsonLoadModal.classList.remove('visible');
+        });
+
+        devImportJsonFileBtn.addEventListener('click', () => {
+            const file = devImportJsonFileEl.files[0];
+            if (!file) {
+                alert('Please select a JSON file to load.');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                if (loadFormDefinition(event.target.result)) {
+                    startForm();
+                    devJsonLoadModal.classList.remove('visible');
+                    devImportJsonFileEl.value = null; // Reset file input
+                }
+            };
+            reader.onerror = function() {
+                alert('Error reading file.');
+            };
+            reader.readAsText(file);
+        });
+
+        devImportJsonTextBtn.addEventListener('click', () => {
+            const jsonText = devPasteJsonArea.value.trim();
+            if (!jsonText) {
+                alert('Please paste JSON data into the text area.');
+                return;
+            }
+            if (loadFormDefinition(jsonText)) {
+                startForm();
+                devJsonLoadModal.classList.remove('visible');
+                devPasteJsonArea.value = ''; // Clear textarea
+            }
+        });
+
+
+        // Initialize
+        if (loadFormDefinition(formDefinitionJSON)) {
+            startForm();
+        }
+    </script>
+</body>
+</html>

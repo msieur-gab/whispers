@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab-Based Form Builder</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        .builder-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 0; 
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden; 
+        }
+        .main-controls-area {
+             padding: 20px;
+        }
+        .tab-bar { 
+            display: flex;
+            background-color: #e9ecef;
+            padding: 10px 10px 0 10px;
+            border-bottom: 1px solid #dee2e6;
+            flex-wrap: wrap; 
+        }
+        .tab-button { 
+            padding: 10px 15px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-right: 5px;
+            margin-bottom: -1px; 
+            background-color: #f8f9fa;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            position: relative;
+        }
+        .tab-button.active { 
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff; 
+            font-weight: bold;
+        }
+        .tab-button .rename-tab-input {
+            border: 1px solid #ccc;
+            padding: 2px 4px;
+            font-size: 0.9em;
+            width: 100px;
+        }
+        .tab-button .delete-tab-btn {
+            margin-left: 8px;
+            color: #e74c3c;
+            font-size: 0.8em;
+            padding: 2px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .add-tab-button { 
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-left: 10px; 
+            align-self: center; 
+            margin-bottom: 5px;
+        }
+
+        .tab-content { 
+            padding: 20px;
+            display: none; 
+        }
+        .tab-content.active { 
+            display: block;
+        }
+
+        .question-block { 
+            background-color: #fdfdfd;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            position: relative; 
+        }
+        .question-block label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .question-block input[type="text"],
+        .question-block textarea,
+        .question-block select {
+            width: calc(100% - 22px); padding: 10px; border: 1px solid #ccc;
+            border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; font-size: 0.95em;
+        }
+        .question-block textarea { min-height: 60px; resize: vertical; }
+        .question-block .inline-input { width: calc(50% - 22px); margin-right: 10px; }
+        .question-block .short-input { width: calc(30% - 22px); }
+        .question-block .element-id { 
+            background-color: #f8f9fa; 
+            color: #495057;
+            cursor: not-allowed;
+        }
+        .next-step-target-area, .question-actions {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #eee;
+        }
+        .question-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+
+        .options-area { margin-top: 10px; padding-left: 20px; border-left: 3px solid #e0e0e0; }
+        .option-entry {
+            display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px;
+            padding: 10px; border: 1px dashed #eee; border-radius: 4px; background-color: #f9f9f9;
+        }
+        .option-entry input[type="text"] { flex-grow: 1; margin-bottom: 0; min-width: 120px; }
+        .option-entry .branch-target-select { flex-basis: 200px; flex-grow: 2; margin-bottom: 0; }
+
+        .delete-question-btn, .remove-option-btn { 
+            background-color: #e74c3c; color: white; border: none; padding: 5px 8px;
+            border-radius: 4px; cursor: pointer; font-size: 0.8em;
+        }
+        .delete-question-btn { position: absolute; top: 10px; right: 10px; }
+
+        .action-buttons-footer { 
+            padding: 20px;
+            border-top: 1px solid #e0e0e0;
+            background-color: #f8f9fa;
+            text-align: right;
+        }
+        .action-buttons-footer button, .add-question-to-tab-btn { 
+            background-color: #3498db; color: white; padding: 10px 15px; border: none;
+            border-radius: 4px; cursor: pointer; font-size: 1em; margin-left: 10px;
+        }
+        .add-question-to-tab-btn { margin-left: 0; margin-bottom:15px; background-color: #2ecc71; }
+        .action-buttons-footer button.test { background-color: #f39c12; }
+        
+        .control-group { margin-bottom: 15px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .control-group input[type="file"], 
+        .control-group textarea#paste-json-area { 
+            width: calc(100% - 22px); padding: 8px 10px; border: 1px solid #ccc; 
+            border-radius: 4px; box-sizing: border-box; margin-bottom: 5px;
+        }
+        .control-group textarea#paste-json-area { min-height: 100px; }
+
+        /* Toggle Switch CSS */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px; /* Width of the switch */
+            height: 26px; /* Height of the switch */
+            margin-left: 10px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 26px; /* Make it round */
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px; /* Size of the circle */
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #3498db; /* Color when ON */
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px); /* How far the circle moves */
+        }
+
+
+        /* Modal styles */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-overlay.visible { display: flex; }
+        .modal-content { background-color: #fff; padding: 30px; border-radius: 8px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; }
+        .modal-close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.8em; cursor: pointer; color: #777; }
+        #test-form-render-area .test-question-label, #test-form-render-area .test-section-header { font-size: 1.2em; font-weight: bold; margin-bottom: 15px; color: #2c3e50; }
+        #test-form-render-area .test-question-label .required-indicator { color: #e74c3c; margin-left: 4px; font-weight: bold;}
+        #test-form-render-area .test-navigation-btn, 
+        #test-form-render-area .test-radio-option,
+        #test-form-render-area .test-checkbox-option { margin-bottom: 10px; }
+        #test-form-render-area .test-checkbox-option input,
+        #test-form-render-area .test-radio-option input { margin-right: 8px; }
+        #json-output-area textarea { width: 100%; box-sizing: border-box; height: 200px; font-family: monospace; margin-top:10px; }
+        .test-answers-summary { margin-top: 20px; padding: 15px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 4px;}
+        .test-answers-summary h3 { margin-top: 0; color: #34495e; }
+        .test-answers-summary p { margin: 5px 0; font-size: 0.95em; }
+        .test-answers-summary strong { color: #2c3e50; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="builder-container">
+        <div class="tab-bar" id="tab-bar">
+            </div>
+
+        <div id="tab-content-container">
+            </div>
+        
+        <div class="main-controls-area"> <hr style="margin: 20px 0;">
+            <h2>Manage Tree Data</h2>
+            <div class="control-group">
+                <label for="import-json-file">Import JSON File:</label>
+                <input type="file" id="import-json-file" accept=".json">
+                <button type="button" id="import-json-btn" style="margin-top: 5px;">Import from File</button>
+            </div>
+            <div class="control-group">
+                <label for="paste-json-area">Or Paste JSON Text:</label>
+                <textarea id="paste-json-area" placeholder="Paste your JSON data here..."></textarea>
+                <button type="button" id="import-json-text-btn" style="margin-top: 5px;">Import from Text</button>
+            </div>
+            <div id="json-output-area"> <h2>Generated JSON</h2>
+                <textarea id="json-output" readonly></textarea>
+            </div>
+        </div>
+
+
+        <div class="action-buttons-footer">
+            <button type="button" id="test-form-btn" class="test">Test Form</button>
+            <button type="button" id="generate-json-btn">Generate/Update JSON Output</button>
+        </div>
+    </div>
+
+    <div id="test-form-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button type="button" class="modal-close-btn" id="close-test-modal-btn">&times;</button>
+            <h2>Test Your Form</h2>
+            <div id="test-form-render-area"></div>
+        </div>
+    </div>
+
+    <script>
+        const tabBar = document.getElementById('tab-bar');
+        const tabContentContainer = document.getElementById('tab-content-container');
+        const testFormBtn = document.getElementById('test-form-btn');
+        const generateJsonBtn = document.getElementById('generate-json-btn');
+        const jsonOutputTextarea = document.getElementById('json-output'); 
+
+        const importJsonFileEl = document.getElementById('import-json-file');
+        const importJsonBtn = document.getElementById('import-json-btn');
+        const pasteJsonArea = document.getElementById('paste-json-area');
+        const importJsonTextBtn = document.getElementById('import-json-text-btn');
+        
+        const testFormModal = document.getElementById('test-form-modal');
+        const closeTestModalBtn = document.getElementById('close-test-modal-btn');
+        const testFormRenderArea = document.getElementById('test-form-render-area');
+
+        let formSections = []; 
+        let activeSectionId = null; 
+        let nextSectionIdCounter = 1; 
+        let nextQuestionIdCounter = 1; 
+        let testAnswers = {}; 
+
+        function generateUniqueSectionId(attemptedId = null) { 
+            let baseCounter = 1; 
+            let newId = attemptedId;
+        
+            formSections.forEach(section => { 
+                const match = section.id.match(/(?:section_|tab_|s_)(\d+)/); 
+                if (match) {
+                    baseCounter = Math.max(baseCounter, parseInt(match[1]) + 1);
+                }
+            });
+            if (attemptedId) { 
+                 const match = attemptedId.match(/(?:section_|tab_|s_)(\d+)/);
+                if (match) {
+                    baseCounter = Math.max(baseCounter, parseInt(match[1]) + 1);
+                }
+            }
+        
+            if (!newId || formSections.some(section => section.id === newId)) {
+                do {
+                    newId = `section_${baseCounter++}`; 
+                } while (formSections.some(section => section.id === newId));
+            }
+            nextSectionIdCounter = Math.max(nextSectionIdCounter, baseCounter);
+            return newId;
+        }
+
+        function generateUniqueQuestionId(attemptedId = null) {
+            let baseCounter = 1; 
+            let newId = attemptedId;
+
+            formSections.forEach(section => {
+                section.elements.forEach(el => {
+                    const match = el.id.match(/q_(\d+)/);
+                    if (match) {
+                        baseCounter = Math.max(baseCounter, parseInt(match[1]) + 1);
+                    }
+                });
+            });
+             if (attemptedId) {
+                const match = attemptedId.match(/q_(\d+)/);
+                if (match) {
+                    baseCounter = Math.max(baseCounter, parseInt(match[1]) + 1);
+                }
+            }
+
+            if (!newId || formSections.some(section => section.elements.some(el => el.id === newId))) {
+                do {
+                    newId = `q_${baseCounter++}`;
+                } while (formSections.some(section => section.elements.some(el => el.id === newId)));
+            }
+            nextQuestionIdCounter = Math.max(nextQuestionIdCounter, baseCounter);
+            return newId;
+        }
+
+
+        function addSection(name = `Section ${nextSectionIdCounter}`, elements = [], id = null) { 
+            const sectionId = id && !formSections.some(s => s.id === id) ? id : generateUniqueSectionId(id); 
+            const newSection = { id: sectionId, name: name, elements: elements }; 
+            formSections.push(newSection);
+            renderSectionBar(); 
+            renderSectionContent(sectionId); 
+            switchToSection(sectionId); 
+            return sectionId;
+        }
+
+        function renameSection(sectionId, newName) { 
+            const section = formSections.find(s => s.id === sectionId);
+            if (section) {
+                section.name = newName;
+                renderSectionBar(); 
+                populateAllBranchTargetDropdowns(); 
+            }
+        }
+        
+        function deleteSection(sectionId) { 
+            if (formSections.length <= 1) {
+                alert("Cannot delete the last section.");
+                return;
+            }
+            const sectionToDelete = formSections.find(s=>s.id===sectionId);
+            if (confirm(`Are you sure you want to delete section "${sectionToDelete?.name}" and all its questions?`)) {
+                formSections = formSections.filter(s => s.id !== sectionId);
+                formSections.forEach(sec => { 
+                    sec.elements.forEach(q => {
+                        if (q.options) {
+                            q.options.forEach(opt => {
+                                if ((sectionToDelete.elements && sectionToDelete.elements.some(deletedQ => deletedQ.id === opt.branch_to_element_id)) || opt.branch_to_element_id === sectionId) {
+                                    opt.branch_to_element_id = ""; 
+                                }
+                            });
+                        }
+                        if (q.branch_to_element_id === sectionId || (sectionToDelete.elements && sectionToDelete.elements.some(deletedQ => deletedQ.id === q.branch_to_element_id))) {
+                            q.branch_to_element_id = "";
+                        }
+                    });
+                });
+
+                if (activeSectionId === sectionId) { 
+                    activeSectionId = formSections.length > 0 ? formSections[0].id : null;
+                }
+                renderSectionBar();
+                if (activeSectionId) {
+                     renderSectionContent(activeSectionId); 
+                     switchToSection(activeSectionId);
+                } else {
+                    tabContentContainer.innerHTML = ""; 
+                }
+                populateAllBranchTargetDropdowns();
+            }
+        }
+
+
+        function renderSectionBar() { 
+            tabBar.innerHTML = ''; 
+            formSections.forEach(section => { 
+                const sectionButton = document.createElement('div');
+                sectionButton.classList.add('tab-button'); 
+                sectionButton.setAttribute('data-tab-id', section.id); 
+                
+                const sectionNameSpan = document.createElement('span');
+                sectionNameSpan.textContent = section.name;
+                sectionButton.appendChild(sectionNameSpan);
+
+                if (section.id === activeSectionId) {
+                    sectionButton.classList.add('active');
+                }
+
+                sectionButton.addEventListener('dblclick', () => { 
+                    sectionNameSpan.style.display = 'none'; 
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = section.name;
+                    input.classList.add('rename-tab-input'); 
+                    
+                    const handleRename = () => {
+                        const newName = input.value.trim();
+                        if (newName && newName !== section.name) {
+                            renameSection(section.id, newName);
+                        } else { 
+                            sectionNameSpan.textContent = section.name; 
+                        }
+                        sectionNameSpan.style.display = 'inline'; 
+                        if (input.parentNode) input.remove(); 
+                    };
+
+                    input.addEventListener('blur', handleRename);
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') input.blur();
+                    });
+                    
+                    sectionButton.insertBefore(input, sectionNameSpan); 
+                    input.focus();
+                    input.select();
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-tab-btn'); 
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.title = "Delete Section";
+                deleteBtn.onclick = (e) => { e.stopPropagation(); deleteSection(section.id); };
+                sectionButton.appendChild(deleteBtn);
+
+
+                sectionButton.addEventListener('click', () => switchToSection(section.id));
+                tabBar.appendChild(sectionButton);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.classList.add('add-tab-button'); 
+            addBtn.textContent = '+ Add Section';
+            addBtn.addEventListener('click', () => addSection());
+            tabBar.appendChild(addBtn);
+        }
+
+        function switchToSection(sectionId) { 
+            console.log("Switching to section:", sectionId);
+            activeSectionId = sectionId; 
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            const activeSectionButton = document.querySelector(`.tab-button[data-tab-id="${sectionId}"]`);
+            if (activeSectionButton) activeSectionButton.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            let activeContent = document.getElementById(`content-${sectionId}`); 
+            if (!activeContent) { 
+                console.log("Section content div not found, creating for:", sectionId);
+                activeContent = document.createElement('div');
+                activeContent.classList.add('tab-content');
+                activeContent.id = `content-${sectionId}`;
+                tabContentContainer.appendChild(activeContent);
+                renderSectionContent(sectionId); 
+            }
+            activeContent.classList.add('active');
+            console.log("Active section content:", activeContent);
+        }
+        
+        function renderSectionContent(sectionId) { 
+            console.log("Rendering content for section:", sectionId);
+            let sectionContentDiv = document.getElementById(`content-${sectionId}`);
+            if (!sectionContentDiv) {
+                console.warn("renderSectionContent: sectionContentDiv not found for", sectionId);
+                sectionContentDiv = document.createElement('div');
+                sectionContentDiv.classList.add('tab-content');
+                sectionContentDiv.id = `content-${sectionId}`;
+                tabContentContainer.appendChild(sectionContentDiv);
+            }
+            sectionContentDiv.innerHTML = ''; 
+
+            const sectionData = formSections.find(s => s.id === sectionId); 
+            if (!sectionData) {
+                console.error("renderSectionContent: Section data not found for ID", sectionId);
+                return;
+            }
+            console.log("Section data for rendering:", sectionData);
+
+
+            sectionData.elements.forEach(elementData => {
+                const elementBlock = buildDOMForQuestion(elementData, sectionId); 
+                sectionContentDiv.appendChild(elementBlock);
+            });
+            
+            const addQuestionToThisSectionBtn = document.createElement('button');
+            addQuestionToThisSectionBtn.textContent = 'Add Question to This Section';
+            addQuestionToThisSectionBtn.classList.add('add-question-to-tab-btn'); 
+            addQuestionToThisSectionBtn.addEventListener('click', () => addQuestionToSection(sectionId));
+            sectionContentDiv.appendChild(addQuestionToThisSectionBtn);
+
+            populateAllBranchTargetDropdowns(); 
+        }
+
+        function addQuestionToSection(sectionId, questionData = null) { 
+            const section = formSections.find(s => s.id === sectionId);
+            if (!section) return;
+
+            const isNew = !questionData;
+            const qId = isNew ? generateUniqueQuestionId() : generateUniqueQuestionId(questionData.id); 
+            
+            const newQuestion = questionData ? {...questionData, id: qId, sectionId: sectionId} : { 
+                id: qId,
+                label: '',
+                type: 'text',
+                options: [],
+                branch_to_element_id: '', 
+                required: false, // Default required to false
+                sectionId: sectionId 
+            };
+            newQuestion.sectionId = sectionId; 
+
+            if(isNew || !section.elements.find(el => el.id === qId)) { 
+                 section.elements.push(newQuestion);
+            } else { 
+                const qIndex = section.elements.findIndex(el => el.id === qId);
+                if (qIndex !== -1) section.elements[qIndex] = newQuestion;
+            }
+            
+            renderSectionContent(sectionId); 
+            
+            if(isNew) {
+                const newQuestionBlock = document.getElementById(`content-${sectionId}`).querySelector(`.question-block[data-id="${qId}"]`);
+                if (newQuestionBlock) {
+                    // newQuestionBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+            populateAllBranchTargetDropdowns();
+        }
+
+        function buildDOMForQuestion(elementData, currentSectionId) { 
+            const elementId = elementData.id;
+            const elementType = elementData.type;
+            
+            const elementDiv = document.createElement('div');
+            elementDiv.classList.add('question-block'); 
+            elementDiv.setAttribute('data-id', elementId);
+            elementDiv.setAttribute('data-section-id', currentSectionId); 
+
+            const initialShowOptions = (elementType === 'radio' || elementType === 'select' || elementType === 'checkboxes');
+            const initialShowNextStepForSimpleTypes = (elementType === 'text' || elementType === 'textarea' || elementType === 'info_block');
+            const isRequired = elementData.required === true;
+
+            elementDiv.innerHTML = `
+                <button type="button" class="delete-question-btn">X</button>
+                <div>
+                    <label for="label-${elementId}">Question Label/Text:</label>
+                    <textarea id="label-${elementId}" class="element-label" placeholder="Enter question text">${elementData.label || ''}</textarea>
+                </div>
+                <div>
+                    <label for="id-${elementId}" style="display:inline-block; margin-right:5px;">Question ID:</label>
+                    <input type="text" id="id-${elementId}" class="element-id inline-input short-input" value="${elementId}" readonly>
+                    <label for="type-${elementId}" style="display:inline-block; margin-left:10px; margin-right:5px;">Type:</label>
+                    <select id="type-${elementId}" class="question-type inline-input short-input">
+                        <option value="text" ${elementType === 'text' ? 'selected' : ''}>Text Input</option>
+                        <option value="textarea" ${elementType === 'textarea' ? 'selected' : ''}>Text Area</option>
+                        <option value="radio" ${elementType === 'radio' ? 'selected' : ''}>Radio Options</option>
+                        <option value="checkboxes" ${elementType === 'checkboxes' ? 'selected' : ''}>Checkboxes</option>
+                        <option value="select" ${elementType === 'select' ? 'selected' : ''}>Dropdown (Select)</option>
+                        <option value="info_block" ${elementType === 'info_block' ? 'selected' : ''}>Info Block</option>
+                    </select>
+                </div>
+                <div class="options-area" style="display: ${initialShowOptions ? 'block' : 'none'};">
+                    <label>Options:</label>
+                    <div class="options-list">
+                        ${(initialShowOptions && elementData.options) ? 
+                            elementData.options.map(opt => createOptionEntryHTML(opt, elementId)).join('') : ''}
+                    </div>
+                    <button type="button" class="add-option-to-question-btn secondary" style="font-size:0.9em; padding: 6px 10px;">Add Option</button>
+                </div>
+                <div class="next-step-target-area" style="display: ${initialShowNextStepForSimpleTypes ? 'block' : 'none'};">
+                    <label for="next-step-${elementId}">After this element, go to:</label>
+                    <select id="next-step-${elementId}" class="element-branch-target-select branch-target-select" data-selected-target="${elementData.branch_to_element_id || ''}">
+                        </select>
+                </div>
+                 <div>
+                    <label for="phase-${elementId}">Phase/Section (Informational for this Question):</label>
+                    <input type="text" id="phase-${elementId}" class="question-phase" value="${elementData.is_start_of_phase || ''}" placeholder="e.g., Personal Details for this Q">
+                </div>
+                <div class="question-actions">
+                    <label for="required-${elementId}" style="margin-right: 5px; font-weight:normal;">Required</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="required-${elementId}" class="question-required-toggle" ${isRequired ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            `;
+            attachQuestionBlockListeners(elementDiv, currentSectionId);
+            return elementDiv;
+        }
+        
+        function attachQuestionBlockListeners(questionBlock, sectionId) { 
+            const typeSelect = questionBlock.querySelector('.question-type');
+            const optionsArea = questionBlock.querySelector('.options-area');
+            const addOptionBtnInternal = questionBlock.querySelector('.add-option-to-question-btn');
+            const optionsListDiv = questionBlock.querySelector('.options-list');
+            const deleteQuestionBtn = questionBlock.querySelector('.delete-question-btn');
+            const nextStepTargetArea = questionBlock.querySelector('.next-step-target-area'); 
+            const requiredToggle = questionBlock.querySelector('.question-required-toggle');
+
+            typeSelect.addEventListener('change', () => {
+                const selectedType = typeSelect.value;
+                const showOptions = (selectedType === 'radio' || selectedType === 'select' || selectedType === 'checkboxes');
+                const showNextStepForSimpleTypes = (selectedType === 'text' || selectedType === 'textarea' || selectedType === 'info_block');
+                
+                if(optionsArea) optionsArea.style.display = showOptions ? 'block' : 'none';
+                if(nextStepTargetArea) nextStepTargetArea.style.display = showNextStepForSimpleTypes ? 'block' : 'none';
+                
+                if (!showOptions && optionsListDiv) {
+                    optionsListDiv.innerHTML = ''; 
+                }
+                updateQuestionDataFromDOM(questionBlock, sectionId);
+            });
+
+             if (typeSelect) {
+                const initialType = typeSelect.value;
+                const initialShowOptions = (initialType === 'radio' || initialType === 'select' || initialType === 'checkboxes');
+                const initialShowNextStep = (initialType === 'text' || initialType === 'textarea' || initialType === 'info_block');
+                if(optionsArea) optionsArea.style.display = initialShowOptions ? 'block' : 'none';
+                if(nextStepTargetArea) nextStepTargetArea.style.display = initialShowNextStep ? 'block' : 'none';
+            }
+
+
+            if (addOptionBtnInternal) {
+                addOptionBtnInternal.addEventListener('click', () => {
+                    const optionEntryHTML = createOptionEntryHTML(null, questionBlock.getAttribute('data-id'));
+                    const tempDiv = document.createElement('div'); 
+                    tempDiv.innerHTML = optionEntryHTML;
+                    const newOptionNode = tempDiv.firstElementChild;
+                    optionsListDiv.appendChild(newOptionNode);
+                    populateBranchTargetDropdown(newOptionNode.querySelector('.branch-target-select'), questionBlock.getAttribute('data-id'));
+                    newOptionNode.querySelector('.remove-option-btn').addEventListener('click', (e) => {
+                        e.target.closest('.option-entry').remove();
+                        updateQuestionDataFromDOM(questionBlock, sectionId);
+                    });
+                    updateQuestionDataFromDOM(questionBlock, sectionId);
+                });
+            }
+            
+            if (optionsListDiv) {
+                optionsListDiv.querySelectorAll('.remove-option-btn').forEach(btn => {
+                     btn.addEventListener('click', (e) => {
+                        e.target.closest('.option-entry').remove();
+                        updateQuestionDataFromDOM(questionBlock, sectionId);
+                    });
+                });
+                optionsListDiv.querySelectorAll('.branch-target-select').forEach(selectEl => { 
+                     populateBranchTargetDropdown(selectEl, questionBlock.getAttribute('data-id'));
+                });
+            }
+            const elementBranchSelect = questionBlock.querySelector('.element-branch-target-select');
+            if (elementBranchSelect) {
+                populateBranchTargetDropdown(elementBranchSelect, questionBlock.getAttribute('data-id'));
+            }
+
+
+            deleteQuestionBtn.addEventListener('click', () => {
+                const qId = questionBlock.getAttribute('data-id');
+                const section = formSections.find(s => s.id === sectionId); 
+                if (section) {
+                    section.elements = section.elements.filter(el => el.id !== qId);
+                }
+                questionBlock.remove();
+                populateAllBranchTargetDropdowns();
+            });
+            
+            questionBlock.querySelectorAll('input:not(.element-id):not(.question-required-toggle), textarea, select').forEach(inputEl => {
+                const eventType = (inputEl.tagName === 'SELECT' || inputEl.type === 'text') ? 'change' : 'input';
+                inputEl.addEventListener(eventType, () => updateQuestionDataFromDOM(questionBlock, sectionId));
+            });
+            if(requiredToggle){
+                requiredToggle.addEventListener('change', () => updateQuestionDataFromDOM(questionBlock, sectionId));
+            }
+        }
+        
+        function updateQuestionDataFromDOM(questionBlock, sectionId) { 
+            const questionId = questionBlock.getAttribute('data-id');
+            const section = formSections.find(s => s.id === sectionId); 
+            if (!section) return;
+            const qIndex = section.elements.findIndex(el => el.id === questionId);
+            if (qIndex === -1) {
+                 console.warn("updateQuestionDataFromDOM: Question not found in section data", questionId, sectionId);
+                return;
+            }
+
+            const currentData = section.elements[qIndex];
+            currentData.label = questionBlock.querySelector('.element-label').value;
+            currentData.type = questionBlock.querySelector('.question-type').value;
+            currentData.is_start_of_phase = questionBlock.querySelector('.question-phase').value || undefined;
+            const requiredToggle = questionBlock.querySelector('.question-required-toggle');
+            currentData.required = requiredToggle ? requiredToggle.checked : false;
+
+            currentData.options = [];
+            currentData.branch_to_element_id = undefined; 
+            currentData.sectionId = sectionId; 
+
+            if (currentData.type === 'radio' || currentData.type === 'select' || currentData.type === 'checkboxes') {
+                questionBlock.querySelectorAll('.options-list .option-entry').forEach(optEntry => {
+                    currentData.options.push({
+                        label: optEntry.querySelector('.option-label-input').value,
+                        value: optEntry.querySelector('.option-value-input').value,
+                        branch_to_element_id: optEntry.querySelector('.option-branch-target-input').value || undefined
+                    });
+                });
+            } else if (currentData.type === 'text' || currentData.type === 'textarea' || currentData.type === 'info_block') {
+                const elementBranchSelect = questionBlock.querySelector('.element-branch-target-select');
+                if (elementBranchSelect) {
+                    currentData.branch_to_element_id = elementBranchSelect.value || undefined;
+                }
+            }
+        }
+
+        function createOptionEntryHTML(option = null, questionId) { 
+            const optLabel = option ? option.label : '';
+            const optValue = option ? option.value : '';
+            const branchTo = option ? option.branch_to_element_id || '' : '';
+            return `
+                <div class="option-entry">
+                    <input type="text" class="option-label-input" placeholder="Option Label" value="${optLabel}">
+                    <input type="text" class="option-value-input" placeholder="Option Value" value="${optValue}">
+                    <select class="option-branch-target-input branch-target-select" data-selected-target="${branchTo}">
+                        </select>
+                    <button type="button" class="remove-option-btn">Remove</button>
+                </div>`;
+        }
+
+        function populateBranchTargetDropdown(selectElement, currentQuestionId) {
+            const previouslySelected = selectElement.getAttribute('data-selected-target') || '';
+            selectElement.innerHTML = ''; 
+
+            let optGroup = null;
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            if (selectElement.closest('.option-entry')) {
+                defaultOption.textContent = "Continue to next question (in this section)";
+            } else {
+                 defaultOption.textContent = "Go to next element (default flow)";
+            }
+            selectElement.appendChild(defaultOption);
+
+
+            const submitOption = document.createElement('option');
+            submitOption.value = "_SUBMIT_FORM_";
+            submitOption.textContent = "Submit form";
+            selectElement.appendChild(submitOption);
+            
+            optGroup = document.createElement('optgroup');
+            optGroup.label = "Go to Section:";
+            formSections.forEach(section => { 
+                const option = document.createElement('option');
+                option.value = section.id; 
+                option.textContent = `${section.name} (Section)`;
+                optGroup.appendChild(option);
+            });
+            selectElement.appendChild(optGroup);
+
+            formSections.forEach(section => { 
+                if (section.elements.length > 0) {
+                    optGroup = document.createElement('optgroup');
+                    optGroup.label = `Questions in ${section.name}:`;
+                    section.elements.forEach(q => {
+                        if (q.id === currentQuestionId) return; 
+                        const option = document.createElement('option');
+                        option.value = q.id;
+                        option.textContent = `${q.label.substring(0,25) || q.id}`;
+                        optGroup.appendChild(option);
+                    });
+                    if(optGroup.children.length > 0) selectElement.appendChild(optGroup);
+                }
+            });
+            selectElement.value = previouslySelected; 
+        }
+
+        function populateAllBranchTargetDropdowns() {
+            document.querySelectorAll('.branch-target-select').forEach(selectEl => {
+                const questionBlock = selectEl.closest('.question-block');
+                if (questionBlock) {
+                    const questionId = questionBlock.getAttribute('data-id');
+                    populateBranchTargetDropdown(selectEl, questionId);
+                }
+            });
+        }
+        
+        function processImportedJson(jsonDataString) {
+            console.groupCollapsed("JSON Import Process");
+            try {
+                const flatImportedData = JSON.parse(jsonDataString);
+                console.log("Parsed imported data:", flatImportedData);
+                if (!Array.isArray(flatImportedData)) {
+                    alert('Invalid JSON format. Expected an array of form elements.');
+                    console.groupEnd();
+                    return;
+                }
+
+                formSections = []; 
+                activeSectionId = null;
+                tabContentContainer.innerHTML = ''; 
+                nextSectionIdCounter = 1; 
+                nextQuestionIdCounter = 1;
+                let currentSectionForImport = null; 
+                let maxSectionNum = 0; 
+                let maxQNum = 0;
+
+                flatImportedData.forEach((element, index) => {
+                    console.log(`Processing element ${index}:`, element);
+                    if (!element.id) {
+                        console.warn("Skipping element without ID during import:", element);
+                        return;
+                    }
+
+                    if (element.type === 'section_header') {
+                        const sectionId = generateUniqueSectionId(element.id); 
+                        const sectionName = element.label || `Section ${nextSectionIdCounter -1}`; 
+                        currentSectionForImport = { id: sectionId, name: sectionName, elements: [] };
+                        if (element.id !== sectionId) {
+                             console.warn(`Section ID '${element.id}' was regenerated to '${sectionId}'.`);
+                        }
+                        formSections.push(currentSectionForImport);
+                        console.log("Created/Found section:", currentSectionForImport);
+                        const sectionNumMatch = sectionId.match(/(?:section_|tab_|s_)(\d+)/); 
+                        if (sectionNumMatch) {
+                            const num = parseInt(sectionNumMatch[1] || sectionNumMatch[2]); 
+                            maxSectionNum = Math.max(maxSectionNum, num);
+                        }
+                    } else { 
+                        if (!currentSectionForImport) { 
+                            console.log("No current section, creating default for question:", element.id);
+                            const defaultSectionId = generateUniqueSectionId("section_default");
+                            currentSectionForImport = { id: defaultSectionId, name: "Default Section", elements: [] };
+                            formSections.push(currentSectionForImport);
+                             const sectionNumMatch = defaultSectionId.match(/(?:section_|tab_|s_)(\d+)/);
+                             if (sectionNumMatch) {
+                                const num = parseInt(sectionNumMatch[1] || sectionNumMatch[2]);
+                                maxSectionNum = Math.max(maxSectionNum, num);
+                             }
+                        }
+                        const questionId = generateUniqueQuestionId(element.id);
+                        if (element.id !== questionId) {
+                           console.warn(`Question ID '${element.id}' was regenerated to '${questionId}'.`);
+                        }
+                        const questionType = element.type || 'text';
+                        const options = (questionType === 'radio' || questionType === 'select' || questionType === 'checkboxes') ? (element.options || []) : [];
+                        
+                        const newQuestionData = { 
+                            ...element, 
+                            id: questionId, 
+                            type: questionType,
+                            options: options,
+                            required: element.required === true, // Ensure boolean
+                            sectionId: currentSectionForImport.id 
+                        };
+                        delete newQuestionData.tabId; 
+
+                        currentSectionForImport.elements.push(newQuestionData);
+                        console.log(`Added question ${questionId} to section ${currentSectionForImport.id}`, newQuestionData);
+                        const qNumMatch = questionId.match(/q_(\d+)/);
+                        if (qNumMatch) maxQNum = Math.max(maxQNum, parseInt(qNumMatch[1]));
+                    }
+                });
+                
+                nextSectionIdCounter = maxSectionNum + 1;
+                nextQuestionIdCounter = maxQNum + 1;
+                console.log("Final nextSectionIdCounter:", nextSectionIdCounter, "Final nextQuestionIdCounter:", nextQuestionIdCounter);
+                console.log("Reconstructed form (sections and their questions) before rendering:", JSON.parse(JSON.stringify(formSections)));
+
+
+                if (formSections.length > 0) {
+                    renderSectionBar(); 
+                    tabContentContainer.innerHTML = ''; 
+                    switchToSection(formSections[0].id); 
+                } else { 
+                    console.log("No sections found after import, initializing default builder state.");
+                    tabBar.innerHTML = '';
+                    tabContentContainer.innerHTML = '';
+                    initializeBuilder(); 
+                }
+                
+                updateJsonOutputTextarea();
+                alert('JSON data imported and form rebuilt!');
+
+            } catch (error) {
+                alert('Error processing imported JSON: ' + error.message);
+                console.error("Import Error:", error);
+            }
+            console.groupEnd();
+        }
+
+        // --- Import Event Listeners ---
+        importJsonBtn.addEventListener('click', () => {
+            const file = importJsonFileEl.files[0];
+            if (!file) { alert('Please select a JSON file to import.'); return; }
+            const reader = new FileReader();
+            reader.onload = function(event) { processImportedJson(event.target.result); };
+            reader.onerror = function() { alert('Error reading file.'); };
+            reader.readAsText(file);
+            importJsonFileEl.value = null; 
+        });
+
+        importJsonTextBtn.addEventListener('click', () => {
+            const jsonText = pasteJsonArea.value.trim();
+            if (!jsonText) { alert('Please paste JSON data into the text area.'); return; }
+            processImportedJson(jsonText);
+        });
+
+
+        function updateJsonOutputTextarea() {
+            formSections.forEach(section => { 
+                const contentDiv = document.getElementById(`content-${section.id}`);
+                if (contentDiv) { 
+                    contentDiv.querySelectorAll('.question-block').forEach(qBlock => {
+                        updateQuestionDataFromDOM(qBlock, section.id);
+                    });
+                }
+            });
+
+            const flatElementsData = [];
+            formSections.forEach((section) => { 
+                flatElementsData.push({
+                    id: section.id,
+                    type: 'section_header',
+                    label: section.name,
+                    is_start_of_phase: section.name 
+                });
+                section.elements.forEach(q => {
+                    const questionOutput = { ...q };
+                    delete questionOutput.tabId; 
+                    questionOutput.sectionId = section.id; 
+                    if (!questionOutput.required) { // Omit 'required: false' from JSON for cleanliness
+                        delete questionOutput.required;
+                    }
+                    flatElementsData.push(questionOutput); 
+                });
+            });
+
+            const processedData = flatElementsData.map((el, index, arr) => {
+                const nextElInFlatList = arr[index + 1];
+                let defaultNext = el.default_next_element_id; 
+                let hasExplicitBranch = !!el.branch_to_element_id; 
+
+                if ((el.type === 'radio' || el.type === 'select' || el.type === 'checkboxes') && el.options) {
+                    if (el.options.some(opt => opt.branch_to_element_id && opt.branch_to_element_id !== "")) {
+                        hasExplicitBranch = true; 
+                    }
+                }
+                
+                if (el.type === 'section_header') {
+                    const section = formSections.find(s => s.id === el.id); 
+                    if (section && section.elements.length > 0) {
+                        defaultNext = section.elements[0].id;
+                    } else if (nextElInFlatList) { 
+                        defaultNext = nextElInFlatList.id;
+                    } else {
+                        defaultNext = "_SUBMIT_FORM_";
+                    }
+                } else if (!hasExplicitBranch) { 
+                    const currentSection = formSections.find(s => s.elements.some(q_el => q_el.id === el.id)); 
+                    const currentQuestionIndexInSection = currentSection ? currentSection.elements.findIndex(q_el => q_el.id === el.id) : -1;
+
+                    if (currentSection && currentQuestionIndexInSection !== -1 && currentQuestionIndexInSection < currentSection.elements.length - 1) {
+                        defaultNext = currentSection.elements[currentQuestionIndexInSection + 1].id; 
+                    } else if (nextElInFlatList) { 
+                        defaultNext = nextElInFlatList.id;
+                    } else {
+                        defaultNext = "_SUBMIT_FORM_";
+                    }
+                }
+
+                const outputElement = { ...el };
+                delete outputElement.tabId; 
+                outputElement.default_next_element_id = el.branch_to_element_id ? undefined : (hasExplicitBranch ? undefined : (defaultNext || undefined));
+                return outputElement;
+            });
+            jsonOutputTextarea.value = JSON.stringify(processedData, null, 2);
+        }
+        generateJsonBtn.addEventListener('click', updateJsonOutputTextarea);
+
+
+        // --- Test Form Logic ---
+        let currentTestFlatData = [];
+        let currentTestElementRenderId = null;
+        // testAnswers is already global
+
+
+        testFormBtn.addEventListener('click', () => {
+            updateJsonOutputTextarea(); 
+            const flatJsonString = jsonOutputTextarea.value; 
+            testAnswers = {}; 
+            try {
+                currentTestFlatData = JSON.parse(flatJsonString);
+                if (currentTestFlatData.length > 0) {
+                    currentTestElementRenderId = formSections[0]?.id || currentTestFlatData[0].id; 
+                    renderTestElementFromFlat(currentTestElementRenderId);
+                    testFormModal.classList.add('visible');
+                } else {
+                    alert("Please add at least one element to test the form.");
+                }
+            } catch (e) {
+                alert("Error parsing form data for test. Please generate JSON first.");
+                console.error("Error parsing test data:", e);
+            }
+        });
+        
+        closeTestModalBtn.addEventListener('click', () => {
+            testFormModal.classList.remove('visible');
+            testFormRenderArea.innerHTML = '';
+            currentTestFlatData = [];
+            currentTestElementRenderId = null;
+            testAnswers = {}; 
+        });
+
+        function captureCurrentAnswer(elementId) {
+            if (!elementId || elementId === '_SUBMIT_FORM_') return;
+
+            const elementData = currentTestFlatData.find(el => el.id === elementId);
+            if (!elementData || elementData.type === 'section_header' || elementData.type === 'info_block') {
+                return; 
+            }
+            
+            const textInput = testFormRenderArea.querySelector(`#test_input_${elementId}[type="text"]`); 
+            const textareaInput = testFormRenderArea.querySelector(`#test_input_${elementId}`); // ID used for textarea too
+
+            switch (elementData.type) {
+                case 'text':
+                    if (textInput) testAnswers[elementId] = textInput.value;
+                    break;
+                case 'textarea':
+                    if (textareaInput) testAnswers[elementId] = textareaInput.value;
+                    break;
+                case 'radio':
+                    const checkedRadio = testFormRenderArea.querySelector(`input[name="test_radio_${elementId}"]:checked`);
+                    if (checkedRadio) testAnswers[elementId] = checkedRadio.value;
+                    break;
+                case 'checkboxes':
+                    const checkedBoxes = [];
+                    testFormRenderArea.querySelectorAll(`input[name="test_checkbox_${elementId}"]:checked`).forEach(cb => {
+                        checkedBoxes.push(cb.value);
+                    });
+                    if (checkedBoxes.length > 0) testAnswers[elementId] = checkedBoxes;
+                    else delete testAnswers[elementId]; 
+                    break;
+                case 'select':
+                    const selectElement = testFormRenderArea.querySelector(`#test_input_${elementId}`); // Used ID for select
+                    if (selectElement && selectElement.value) testAnswers[elementId] = selectElement.value;
+                    break;
+            }
+            console.log("Captured answers:", testAnswers);
+        }
+
+
+        function renderTestElementFromFlat(elementId) {
+            if (currentTestElementRenderId && currentTestElementRenderId !== '_SUBMIT_FORM_') {
+                 captureCurrentAnswer(currentTestElementRenderId);
+            }
+
+            testFormRenderArea.innerHTML = ''; 
+            if (elementId === '_SUBMIT_FORM_') {
+                let summaryHTML = '<div class="test-submit-message">Form Submitted (End of Test Path)</div>';
+                summaryHTML += '<div class="test-answers-summary"><h3>Collected Answers:</h3>';
+                if (Object.keys(testAnswers).length === 0) {
+                    summaryHTML += '<p>No answers were recorded.</p>';
+                } else {
+                    for (const qId in testAnswers) {
+                        const question = currentTestFlatData.find(el => el.id === qId);
+                        const questionLabel = question ? question.label : qId;
+                        let answerDisplay = testAnswers[qId];
+                        if (Array.isArray(answerDisplay)) {
+                            answerDisplay = answerDisplay.join(', ');
+                        }
+                        summaryHTML += `<p><strong>${questionLabel}:</strong> ${answerDisplay || '<em>(Not answered)</em>'}</p>`;
+                    }
+                }
+                summaryHTML += '</div>';
+                testFormRenderArea.innerHTML = summaryHTML;
+                return;
+            }
+
+            const element = currentTestFlatData.find(el => el.id === elementId);
+            if (!element) {
+                testFormRenderArea.innerHTML = `<div class="test-submit-message">Error: Element ID "${elementId}" not found. (End of Test Path)</div>`;
+                return;
+            }
+            currentTestElementRenderId = elementId;
+
+            let html = '';
+            let nextIdForNavBtn = element.branch_to_element_id || element.default_next_element_id;
+            if (!nextIdForNavBtn) { 
+                 const currentIndex = currentTestFlatData.findIndex(el => el.id === elementId);
+                 if (currentIndex !== -1 && currentIndex < currentTestFlatData.length - 1) {
+                     nextIdForNavBtn = currentTestFlatData[currentIndex + 1].id;
+                 } else {
+                     nextIdForNavBtn = '_SUBMIT_FORM_';
+                 }
+            }
+
+            const requiredIndicator = element.required ? '<span class="required-indicator">*</span>' : '';
+
+            if (element.type === 'section_header') {
+                html += `<div class="test-section-header">${element.label}</div>`;
+                html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Start Section / Next</button>`;
+            } else if (element.type === 'info_block') {
+                html += `<div class="test-section-description">${element.label}</div>`; 
+                html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+            } else { 
+                html += `<div class="test-question-label">${element.label} ${requiredIndicator}</div>`;
+                switch (element.type) {
+                    case 'text':
+                        html += `<input type="text" placeholder="Your answer" id="test_input_${element.id}">`;
+                        html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+                        break;
+                    case 'textarea':
+                        html += `<textarea rows="4" placeholder="Your answer" id="test_input_${element.id}"></textarea>`;
+                        html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+                        break;
+                    case 'radio':
+                        (element.options || []).forEach(opt => {
+                            html += `<label class="test-radio-option"><input type="radio" name="test_radio_${element.id}" value="${opt.value}" data-branch-target="${opt.branch_to_element_id || ''}"> ${opt.label}</label>`;
+                        });
+                        if (!element.options || !element.options.some(opt => opt.branch_to_element_id)) { 
+                             html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+                        }
+                        break;
+                    case 'checkboxes': 
+                        (element.options || []).forEach(opt => {
+                            html += `<label class="test-checkbox-option"><input type="checkbox" name="test_checkbox_${element.id}" value="${opt.value}" data-branch-target="${opt.branch_to_element_id || ''}"> ${opt.label}</label>`;
+                        });
+                        html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+                        break;
+                    case 'select':
+                        html += `<select data-current-element-id="${element.id}" id="test_input_${element.id}">`;
+                        html += `<option value="">-- Select an option --</option>`;
+                        (element.options || []).forEach(opt => {
+                            html += `<option value="${opt.value}" data-branch-target="${opt.branch_to_element_id || ''}">${opt.label}</option>`;
+                        });
+                        html += `</select>`;
+                        if (!element.options || !element.options.some(opt => opt.branch_to_element_id)) { 
+                             html += `<button type="button" class="test-navigation-btn" data-next-id="${nextIdForNavBtn}">Next</button>`;
+                        }
+                        break;
+                }
+            }
+            testFormRenderArea.innerHTML = html;
+            attachTestFormListenersFromFlat();
+        }
+        
+        function attachTestFormListenersFromFlat() {
+            testFormRenderArea.querySelectorAll('.test-navigation-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const nextId = btn.getAttribute('data-next-id');
+                    renderTestElementFromFlat(nextId); 
+                });
+            });
+
+            testFormRenderArea.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    captureCurrentAnswer(currentTestElementRenderId); 
+                    const branchTarget = e.target.getAttribute('data-branch-target');
+                    if (branchTarget && branchTarget !== "") {
+                        renderTestElementFromFlat(branchTarget);
+                    } else { 
+                        const currentElement = currentTestFlatData.find(el => el.id === currentTestElementRenderId);
+                        const nextId = currentElement.branch_to_element_id || currentElement.default_next_element_id || getNextElementIdInSequenceFromFlat(currentTestElementRenderId);
+                        renderTestElementFromFlat(nextId);
+                    }
+                });
+            });
+            
+            testFormRenderArea.querySelectorAll('select').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    captureCurrentAnswer(currentTestElementRenderId); 
+                    const selectedOptionEl = e.target.options[e.target.selectedIndex];
+                    const branchTarget = selectedOptionEl.getAttribute('data-branch-target');
+                     if (branchTarget && branchTarget !== "") {
+                        renderTestElementFromFlat(branchTarget);
+                    } else {
+                        const currentElement = currentTestFlatData.find(el => el.id === currentTestElementRenderId);
+                        const nextId = currentElement.branch_to_element_id || currentElement.default_next_element_id || getNextElementIdInSequenceFromFlat(currentTestElementRenderId);
+                        renderTestElementFromFlat(nextId);
+                    }
+                });
+            });
+        }
+
+        function getNextElementIdInSequenceFromFlat(currentId) {
+            const currentIndex = currentTestFlatData.findIndex(el => el.id === currentId);
+            if (currentIndex !== -1 && currentIndex < currentTestFlatData.length - 1) {
+                return currentTestFlatData[currentIndex + 1].id;
+            }
+            return '_SUBMIT_FORM_'; 
+        }
+
+        // --- Initial Setup ---
+        function initializeBuilder() {
+            // document.querySelector('.builder-container').appendChild(jsonOutputContainer); // JSON output is now part of main HTML
+            if (formSections.length === 0) { 
+                const initialSectionId = addSection("Start Here"); 
+                addQuestionToSection(initialSectionId); 
+            }
+        }
+
+        initializeBuilder();
+    </script>
+</body>
+</html>
