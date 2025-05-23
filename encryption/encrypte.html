@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Survey Demo (Reader PW Access)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 700px; margin: 20px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2, h3 { color: #1a202c; }
+        h2 { border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-top: 20px; }
+        label { display: block; margin-top: 10px; font-weight: 600; color: #4a5568; }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #cbd5e0; border-radius: 4px;
+            box-sizing: border-box; font-size: 14px;
+        }
+        textarea { min-height: 80px; font-family: monospace; white-space: pre-wrap; word-break: break-all; }
+        button {
+            background-color: #4299e1; color: white; padding: 10px 15px; border: none; border-radius: 4px;
+            cursor: pointer; font-weight: 600; margin-top: 15px; transition: background-color 0.2s;
+        }
+        button:hover { background-color: #3182ce; }
+        button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+        .info, .error {
+            padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 0.9em;
+        }
+        .info { background-color: #e6fffa; border: 1px solid #38b2ac; color: #2c7a7b; }
+        .error { background-color: #fed7d7; border: 1px solid #f56565; color: #c53030; }
+        .question-container { padding: 15px; border: 1px solid #e2e8f0; border-radius: 6px; margin-top:15px; background-color: #f7fafc; }
+        .answer-options label { font-weight: normal; margin-left: 5px; }
+        .answer-options input[type="radio"] { margin-right: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-700">Secure Survey</h1>
+        <div id="status" class="hidden"></div>
+
+        <div id="questionnaire-area"> {/* ID kept as questionnaire-area for simplicity, or change if necessary */}
+            <div id="current-question-container" class="question-container">
+                </div>
+            <button id="nextQuestionBtn" class="bg-green-500 hover:bg-green-600">Next</button>
+        </div>
+
+        <div id="encryption-area" class="hidden mt-6">
+            <h2>Finalization and Encryption</h2>
+            <div>
+                <label for="userPassword">Your Password (to encrypt/decrypt your answers):</label>
+                <input type="password" id="userPassword" placeholder="Enter a strong password">
+            </div>
+            <div>
+                <label for="readerPassword">Reader's Password (optional):</label>
+                <input type="password" id="readerPassword" placeholder="Password for reader access">
+                <p class="text-xs text-gray-500 mt-1">Leave empty if no reader password access is required.</p>
+            </div>
+            <button id="finalizeAndEncryptBtn" class="bg-orange-500 hover:bg-orange-600">Finalize and Encrypt Answers</button>
+        </div>
+
+        <div id="result-area" class="hidden mt-6">
+            <h3>Encrypted Data Package (JSON to save/send):</h3>
+            <textarea id="encryptedPackageOutput" rows="15" readonly></textarea>
+            <button id="downloadPackageBtn" class="bg-purple-500 hover:bg-purple-600">Download Encrypted Package (.json)</button>
+        </div>
+    </div>
+
+    <script>
+        // --- UTILS ---
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        const statusDiv = document.getElementById('status');
+        function showStatus(message, isError = false) {
+            statusDiv.textContent = message;
+            statusDiv.className = isError ? 'error' : 'info';
+            statusDiv.classList.remove('hidden');
+            if (isError) console.error("ERROR:", message); else console.log("INFO:", message);
+        }
+        
+        // --- SURVEY DEFINITION (DECISION TREE) ---
+        const questionnaire = { // Variable name kept for brevity, refers to survey structure
+            start: 'q1',
+            questions: {
+                'q1': { text: "Do you like fruits?", type: 'radio', options: [ { text: "Yes", value: "yes", next: 'q2_yes' }, { text: "No", value: "no", next: 'q2_no' }]},
+                'q2_yes': { text: "What is your favorite fruit?", type: 'text', next: 'END' },
+                'q2_no': { text: "Do you prefer vegetables?", type: 'radio', options: [ { text: "Yes", value: "yes", next: 'q3_veg_yes' }, { text: "No", value: "no", next: 'q3_veg_no' }]},
+                'q3_veg_yes': { text: "What is your favorite vegetable?", type: 'text', next: 'END'},
+                'q3_veg_no': { text: "What do you like to eat then (in general)?", type: 'text', next: 'END'}
+            }
+        };
+
+        // --- SURVEY LOGIC ---
+        const questionnaireArea = document.getElementById('questionnaire-area'); // HTML ID
+        const currentQuestionContainer = document.getElementById('current-question-container');
+        const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+        const encryptionArea = document.getElementById('encryption-area');
+        const resultArea = document.getElementById('result-area');
+
+        let currentQuestionId = questionnaire.start;
+        let userAnswers = {}; // Stores { questionId: { questionText, answerValue } }
+
+        function displayQuestion(questionId) {
+            const questionData = questionnaire.questions[questionId];
+            if (!questionData) { showStatus("Error: Question not found: " + questionId, true); return; }
+            
+            let html = `<h3 class="text-lg font-semibold mb-3">${questionData.text}</h3><div class="answer-options">`;
+            if (questionData.type === 'radio') {
+                questionData.options.forEach((opt, index) => {
+                    html += `<div><input type="radio" id="q_${questionId}_opt${index}" name="q_${questionId}" value="${opt.value}"><label for="q_${questionId}_opt${index}">${opt.text}</label></div>`;
+                });
+            } else if (questionData.type === 'text') {
+                html += `<input type="text" id="q_${questionId}_text" name="q_${questionId}" class="border p-2 rounded w-full">`;
+            }
+            html += `</div>`;
+            currentQuestionContainer.innerHTML = html;
+
+            // Change button text if it's the last question
+            if (questionData.next === 'END' && questionData.type !== 'radio') { 
+                nextQuestionBtn.textContent = "Finish and Encrypt"; 
+            } else if (questionData.type === 'radio' && questionData.options.every(opt => opt.next === 'END')) { 
+                nextQuestionBtn.textContent = "Finish and Encrypt"; 
+            } else { 
+                nextQuestionBtn.textContent = "Next"; 
+            }
+        }
+
+        nextQuestionBtn.addEventListener('click', () => {
+            const questionData = questionnaire.questions[currentQuestionId];
+            let answerValue, nextId;
+
+            if (questionData.type === 'radio') {
+                const selectedOption = document.querySelector(`input[name="q_${currentQuestionId}"]:checked`);
+                if (!selectedOption) { showStatus("Please select an option.", true); return; }
+                answerValue = selectedOption.value;
+                nextId = questionData.options.find(opt => opt.value === answerValue).next;
+            } else if (questionData.type === 'text') {
+                const textInput = document.getElementById(`q_${currentQuestionId}_text`);
+                answerValue = textInput.value.trim();
+                // Only require an answer if it's not the last question leading to END
+                if (!answerValue && questionData.next !== 'END') { 
+                    showStatus("Please enter an answer.", true); return; 
+                }
+                nextId = questionData.next;
+            }
+
+            userAnswers[currentQuestionId] = { question: questionData.text, answer: answerValue };
+            statusDiv.classList.add('hidden'); // Hide status on successful progression
+
+            if (nextId === 'END') {
+                questionnaireArea.classList.add('hidden');
+                encryptionArea.classList.remove('hidden');
+                showStatus("Survey completed. Please set up encryption.", false);
+            } else {
+                currentQuestionId = nextId;
+                displayQuestion(currentQuestionId);
+            }
+        });
+
+        // --- ENCRYPTION LOGIC ---
+        const userPasswordInput = document.getElementById('userPassword');
+        const readerPasswordInput = document.getElementById('readerPassword');
+        const finalizeAndEncryptBtn = document.getElementById('finalizeAndEncryptBtn');
+        const encryptedPackageOutput = document.getElementById('encryptedPackageOutput');
+        const downloadPackageBtn = document.getElementById('downloadPackageBtn');
+
+        finalizeAndEncryptBtn.addEventListener('click', async () => {
+            const uPassword = userPasswordInput.value;
+            const rPassword = readerPasswordInput.value; // Can be empty
+
+            if (!uPassword) {
+                showStatus("Please enter YOUR password to encrypt your answers.", true);
+                return;
+            }
+
+            try {
+                showStatus("Encrypting...", false);
+                finalizeAndEncryptBtn.disabled = true;
+
+                // 1. Generate a Data Encryption Key (DEK) for the answers
+                const dek = await window.crypto.subtle.generateKey(
+                    { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]
+                );
+
+                // 2. Encrypt the answers with the DEK
+                const answersString = JSON.stringify(userAnswers);
+                const answersBuffer = new TextEncoder().encode(answersString);
+                const data_iv = window.crypto.getRandomValues(new Uint8Array(12)); // Initialization Vector for data encryption
+                const encryptedAnswers = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: data_iv }, dek, answersBuffer
+                );
+
+                // 3. Encrypt the DEK for the User (who filled the survey)
+                const user_salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const user_iv_dek = window.crypto.getRandomValues(new Uint8Array(12)); // IV for DEK encryption for user
+                const userPasswordKeyMaterial = await window.crypto.subtle.importKey(
+                    "raw", new TextEncoder().encode(uPassword), "PBKDF2", false, ["deriveKey"]
+                );
+                const userAesKek = await window.crypto.subtle.deriveKey( // User's Key Encryption Key
+                    { name: "PBKDF2", salt: user_salt, iterations: 250000, hash: "SHA-256" },
+                    userPasswordKeyMaterial, { name: "AES-GCM", length: 256 }, true, ["encrypt"]
+                );
+                const dekToExport = await window.crypto.subtle.exportKey("raw", dek); // Export DEK to encrypt it
+                const userEncryptedDek = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: user_iv_dek }, userAesKek, dekToExport
+                );
+                
+                // 4. Optionally, encrypt the DEK for the Reader
+                let readerEncryptionInfo = null;
+                if (rPassword) {
+                    const reader_salt = window.crypto.getRandomValues(new Uint8Array(16));
+                    const reader_iv_dek = window.crypto.getRandomValues(new Uint8Array(12)); // IV for DEK encryption for reader
+                    const readerPasswordKeyMaterial = await window.crypto.subtle.importKey(
+                        "raw", new TextEncoder().encode(rPassword), "PBKDF2", false, ["deriveKey"]
+                    );
+                    const readerAesKek = await window.crypto.subtle.deriveKey( // Reader's Key Encryption Key
+                        { name: "PBKDF2", salt: reader_salt, iterations: 250000, hash: "SHA-256" },
+                        readerPasswordKeyMaterial, { name: "AES-GCM", length: 256 }, true, ["encrypt"]
+                    );
+                    // dekToExport is already available from user's part
+                    const readerEncryptedDek = await window.crypto.subtle.encrypt(
+                        { name: "AES-GCM", iv: reader_iv_dek }, readerAesKek, dekToExport
+                    );
+                    readerEncryptionInfo = {
+                        encryptedDek_base64: arrayBufferToBase64(readerEncryptedDek),
+                        salt_base64: arrayBufferToBase64(reader_salt),
+                        iv_base64: arrayBufferToBase64(reader_iv_dek),
+                        kdf: "PBKDF2-SHA256", kdfIterations: 250000, kekAlgorithm: "AES-GCM-256"
+                    };
+                }
+
+                // 5. Prepare the final package
+                const finalPackage = {
+                    encryptedAnswers_base64: arrayBufferToBase64(encryptedAnswers),
+                    data_iv_base64: arrayBufferToBase64(data_iv), // IV for the actual answers
+                    userEncryptionInfo: {
+                        encryptedDek_base64: arrayBufferToBase64(userEncryptedDek),
+                        salt_base64: arrayBufferToBase64(user_salt),
+                        iv_base64: arrayBufferToBase64(user_iv_dek), // IV for user's DEK encryption
+                        kdf: "PBKDF2-SHA256", kdfIterations: 250000, kekAlgorithm: "AES-GCM-256"
+                    },
+                    readerEncryptionInfo: readerEncryptionInfo, // Will be null if no reader password was provided
+                    timestamp: new Date().toISOString()
+                };
+
+                encryptedPackageOutput.value = JSON.stringify(finalPackage, null, 2);
+                resultArea.classList.remove('hidden');
+                downloadPackageBtn.disabled = false;
+                showStatus("Answers encrypted successfully!", false);
+
+            } catch (err) {
+                showStatus("Error during encryption: " + err.message, true);
+                console.error("Encryption error details:", err);
+            } finally {
+                finalizeAndEncryptBtn.disabled = false;
+            }
+        });
+
+        downloadPackageBtn.addEventListener('click', () => {
+            if (!encryptedPackageOutput.value) return;
+            const blob = new Blob([encryptedPackageOutput.value], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'encrypted_survey_v2.json'; // Changed filename
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        });
+
+        // --- INITIALIZE ---
+        displayQuestion(currentQuestionId); // Display the first question
+    </script>
+</body>
+</html>

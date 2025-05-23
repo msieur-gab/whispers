@@ -1,0 +1,21 @@
+{
+  "encryptedAnswers_base64": "vjVZyjmXmsiu758eSse+Je7C78vOIJdpNIfUecy0qalGptcj5PBKPFz7NM7ZixDD3s2kfCWzcCRE0zo/s+dbr28mrf0F/fgGTghhQjY5w9jhUD0eFYAat9RXYqC1G2j11QdAmzyfd6msT3MakPfwx4lhHpKbyxuOLiQKp0k9VDrPQbQ//LgkqUrlUWMCSDP3vid99r46ddv44ExuWF+2Rg87ZGoJSmUqUHr7miMm3myl4AM0V8b8iS7kezlYXZ3KUPcJM4weUdq/COSPrIFgienK7aSgH1MbS0qxHOGqtN8OxzE40TC7QWWVm2DHwcQK2I7a/g8+MEWWohb5Anvdq5o+mvL6Kd43VyUA20ArAMg8k3p5WQstFO2KimHv9lVWQ9hN470=",
+  "data_iv_base64": "t1iR25lU6UTqi0HW",
+  "userEncryptionInfo": {
+    "encryptedDek_base64": "zV+iGXmarTwz4adoX1SiXr5QV8iSP7FV4NdVgV9xTNVFlHI9+ZUvW98IVlR24VXx",
+    "salt_base64": "RNAOn9nN/78nE/T+cpVODA==",
+    "iv_base64": "GOaXXn4c1I37JzWE",
+    "kdf": "PBKDF2-SHA256",
+    "kdfIterations": 250000,
+    "kekAlgorithm": "AES-GCM-256"
+  },
+  "readerEncryptionInfo": {
+    "encryptedDek_base64": "UPC7vgQ2Q2O57BIGVd+ZiTuPlAIM0NZMfxs+GCCY3MhBIX/mxYHA+3p2Oe0Rl2Gi",
+    "salt_base64": "LwBQE7LA/XKC30FPAyITrA==",
+    "iv_base64": "giATihBWHA81yKyN",
+    "kdf": "PBKDF2-SHA256",
+    "kdfIterations": 250000,
+    "kekAlgorithm": "AES-GCM-256"
+  },
+  "timestamp": "2025-05-23T14:36:29.954Z"
+}
